@@ -183,11 +183,13 @@ export async function renderAdmin(el) {
   if (!me?.isAdmin) { el.innerHTML = '<div class="empty">Réservé aux administrateurs.</div>'; return; }
   const [users, board] = await Promise.all([allUsers(), leaderboard().catch(() => [])]);
   const stats = new Map(board.map(b => [b.username, b]));
+  users.forEach(u => { u.is_admin = u.is_admin || u.is_super_admin; });
   const admins = users.filter(u => u.is_admin).length;
   el.innerHTML = `<section>
     <div class="page-head"><h1>Admin</h1>
       <p class="muted">${users.length} utilisateur${users.length > 1 ? 's' : ''} inscrit${users.length > 1 ? 's' : ''} · ${admins} admin${admins > 1 ? 's' : ''}.
-      Un admin peut publier, modifier et retirer les listes du site depuis l’éditeur, et gérer les admins ici.</p></div>
+      Un admin peut publier, modifier et retirer les listes du site depuis l’éditeur, et nommer d’autres admins.
+      Seul le super admin peut retirer un admin, et personne ne peut retirer le super admin.</p></div>
     <div class="table-wrap"><table class="users">
       <thead><tr><th>Pseudo</th><th>Inscrit le</th><th>Parties</th><th>Points</th><th>Rôle</th></tr></thead>
       <tbody>${users.map(u => {
@@ -195,9 +197,9 @@ export async function renderAdmin(el) {
         return `<tr${u.id === me.id ? ' class="me"' : ''}><td><b>${esc(u.username)}</b>${u.id === me.id ? ' <span class="muted small">(vous)</span>' : ''}</td>
           <td class="small">${new Date(u.created_at).toLocaleDateString('fr-FR')}</td>
           <td>${s?.sessions ?? 0}</td><td>${s?.points ?? 0}</td>
-          <td class="nowrap">${u.is_admin ? '<span class="tag admin-tag">admin</span> ' : ''}
-            <button class="btn small ${u.is_admin ? 'ghost' : ''}" data-id="${u.id}" data-v="${u.is_admin ? '0' : '1'}"
-              ${u.is_admin && admins === 1 ? 'disabled title="Il faut au moins un admin"' : ''}>${u.is_admin ? 'Retirer admin' : 'Rendre admin'}</button></td></tr>`;
+          <td class="nowrap">${u.is_super_admin ? '<span class="tag admin-tag">👑 super admin</span>'
+            : u.is_admin ? `<span class="tag admin-tag">admin</span> ${me.isSuper ? `<button class="btn small ghost" data-id="${u.id}" data-v="0">Retirer admin</button>` : ''}`
+            : `<button class="btn small" data-id="${u.id}" data-v="1">Rendre admin</button>`}</td></tr>`;
       }).join('')}</tbody></table></div>
   </section>`;
   $$('[data-id]', el).forEach(b => b.onclick = async () => {

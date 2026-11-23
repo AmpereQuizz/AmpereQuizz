@@ -20,10 +20,16 @@ function setMe(u) {
 
 async function loadProfile(user) {
   if (!user) return null;
-  let { data, error } = await sb.from('profiles').select('username, is_admin').eq('id', user.id).maybeSingle();
-  // Avant l'installation de l'administration (supabase/admin.sql), la colonne is_admin n'existe pas.
-  if (error) ({ data } = await sb.from('profiles').select('username').eq('id', user.id).maybeSingle());
-  return { id: user.id, username: data?.username || user.user_metadata?.username || '?', isAdmin: !!data?.is_admin };
+  // Les colonnes d'administration n'existent qu'après les scripts supabase/admin.sql et super-admin.sql.
+  let data = null;
+  for (const cols of ['username, is_admin, is_super_admin', 'username, is_admin', 'username']) {
+    const res = await sb.from('profiles').select(cols).eq('id', user.id).maybeSingle();
+    if (!res.error) { data = res.data; break; }
+  }
+  return {
+    id: user.id, username: data?.username || user.user_metadata?.username || '?',
+    isAdmin: !!(data?.is_admin || data?.is_super_admin), isSuper: !!data?.is_super_admin,
+  };
 }
 
 export async function initCloud() {
@@ -122,6 +128,8 @@ export async function hidePublicList(id, title) {
 // ---------- Administration ----------
 
 export async function allUsers() {
+  const res = await sb.from('profiles').select('id, username, is_admin, is_super_admin, created_at').order('created_at', { ascending: true });
+  if (!res.error) return res.data;
   return check(await sb.from('profiles').select('id, username, is_admin, created_at').order('created_at', { ascending: true }));
 }
 
