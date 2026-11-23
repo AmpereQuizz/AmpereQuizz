@@ -180,7 +180,11 @@
         "wikipedia": [
           "Pie bavarde",
           "en:Pica pica"
-        ]
+        ],
+        "src": "img/oiseaux/pie-bavarde-photo.jpg",
+        "credit": "Alexis Lours",
+        "license": "CC BY 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Eurasian_magpie_2024_03_03_02.jpg"
       },
       "latin": "Pica pica",
       "famille": "Corvidés",
@@ -203,7 +207,11 @@
         "wikipedia": [
           "Corneille noire",
           "en:Corvus corone"
-        ]
+        ],
+        "src": "img/oiseaux/corneille-noire-photo.jpg",
+        "credit": "Alexis Lours",
+        "license": "CC BY 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Carrion_crow_2022_04_05_05_01.jpg"
       },
       "latin": "Corvus corone",
       "famille": "Corvidés",
@@ -225,7 +233,11 @@
         "wikipedia": [
           "Pigeon ramier",
           "en:Columba palumbus"
-        ]
+        ],
+        "src": "img/oiseaux/pigeon-ramier-photo.jpg",
+        "credit": "Stephan Sprinz",
+        "license": "CC BY 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Ringeltaube_auf_Norderney_02_(cropped).jpg"
       },
       "latin": "Columba palumbus",
       "famille": "Columbidés",
@@ -248,7 +260,11 @@
         "wikipedia": [
           "Étourneau sansonnet",
           "en:Sturnus vulgaris"
-        ]
+        ],
+        "src": "img/oiseaux/etourneau-sansonnet-photo.jpg",
+        "credit": "Marek Szczepanek",
+        "license": "CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Sturnus_vulgaris_2_(Marek_Szczepanek).jpg"
       },
       "latin": "Sturnus vulgaris",
       "famille": "Sturnidés",
@@ -270,7 +286,11 @@
         "wikipedia": [
           "Pinson des arbres",
           "en:Fringilla coelebs"
-        ]
+        ],
+        "src": "img/oiseaux/pinson-des-arbres-photo.jpg",
+        "credit": "Andreas Trepte",
+        "license": "CC BY-SA 2.5",
+        "source": "https://commons.wikimedia.org/wiki/File:Chaffinch_(Fringilla_coelebs).jpg"
       },
       "latin": "Fringilla coelebs",
       "famille": "Fringillidés",
@@ -292,7 +312,11 @@
         "wikipedia": [
           "Chardonneret élégant",
           "en:Carduelis carduelis"
-        ]
+        ],
+        "src": "img/oiseaux/chardonneret-elegant-photo.jpg",
+        "credit": "Pierre Dalous",
+        "license": "CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Carduelis_carduelis_(2012).jpg"
       },
       "latin": "Carduelis carduelis",
       "famille": "Fringillidés",
@@ -314,7 +338,11 @@
         "wikipedia": [
           "Martin-pêcheur d'Europe",
           "en:Alcedo atthis"
-        ]
+        ],
+        "src": "img/oiseaux/martin-pecheur-d-europe-photo.jpg",
+        "credit": "Pierre Dalous",
+        "license": "CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Alcedo_atthis_eating_a_tadpole.jpg"
       },
       "latin": "Alcedo atthis",
       "famille": "Alcédinidés",
@@ -332,7 +360,11 @@
         "wikipedia": [
           "Héron cendré",
           "en:Ardea cinerea"
-        ]
+        ],
+        "src": "img/oiseaux/heron-cendre-photo.jpg",
+        "credit": "Laitche",
+        "license": "CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Ardea_cinerea_2013-09-16_2.jpg"
       },
       "latin": "Ardea cinerea",
       "famille": "Ardéidés",
@@ -354,7 +386,11 @@
         "wikipedia": [
           "Cigogne blanche",
           "en:Ciconia ciconia"
-        ]
+        ],
+        "src": "img/oiseaux/cigogne-blanche-photo.jpg",
+        "credit": "Dcabrilo",
+        "license": "CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Stork_(Palic,_Serbia).jpg"
       },
       "latin": "Ciconia ciconia",
       "famille": "Ciconiidés",
@@ -377,7 +413,11 @@
         "wikipedia": [
           "Buse variable",
           "en:Buteo buteo"
-        ]
+        ],
+        "src": "img/oiseaux/buse-variable-photo.jpg",
+        "credit": "caroline legg",
+        "license": "CC BY 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Common_Buzzard_by_caroline_legg_(cropped).jpg"
       },
       "latin": "Buteo buteo",
       "famille": "Accipitridés",
@@ -399,7 +439,11 @@
         "wikipedia": [
           "Faucon crécerelle",
           "en:Falco tinnunculus"
-        ]
+        ],
+        "src": "img/oiseaux/faucon-crecerelle-photo.jpg",
+        "credit": "Andreas Trepte",
+        "license": "CC BY-SA 2.5",
+        "source": "https://commons.wikimedia.org/wiki/File:Common_kestrel_falco_tinnunculus.jpg"
       },
       "latin": "Falco tinnunculus",
       "famille": "Falconidés",
@@ -421,7 +465,11 @@
         "wikipedia": [
           "Chouette hulotte",
           "en:Strix aluco"
-        ]
+        ],
+        "src": "img/oiseaux/chouette-hulotte-photo.jpg",
+        "credit": "K.-M. Hansche",
+        "license": "CC BY-SA 2.5",
+        "source": "https://commons.wikimedia.org/wiki/File:Tawny_wiki.jpg"
       },
       "latin": "Strix aluco",
       "famille": "Strigidés",
@@ -441,7 +489,11 @@
         "wikipedia": [
           "Pic vert",
           "en:Picus viridis"
-        ]
+        ],
+        "src": "img/oiseaux/pic-vert-photo.jpg",
+        "credit": "Charles J. Sharp",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:European_green_woodpecker_(Picus_viridis)_female.jpg"
       },
       "latin": "Picus viridis",
       "famille": "Picidés",
@@ -463,7 +515,11 @@
         "wikipedia": [
           "Geai des chênes",
           "en:Garrulus glandarius"
-        ]
+        ],
+        "src": "img/oiseaux/geai-des-chenes-photo.jpg",
+        "credit": "Luc Viatour",
+        "license": "CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Garrulus_glandarius_1_Luc_Viatour.jpg"
       },
       "latin": "Garrulus glandarius",
       "famille": "Corvidés",
@@ -484,7 +540,11 @@
         "wikipedia": [
           "Hirondelle rustique",
           "en:Hirundo rustica"
-        ]
+        ],
+        "src": "img/oiseaux/hirondelle-rustique-photo.jpg",
+        "credit": "Dion Art",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:%D0%94%D0%B5%D1%80%D0%B5%D0%B2%D0%B5%D0%BD%D1%81%D0%BA%D0%B0%D1%8F_%D0%BB%D0%B0%D1%81%D1%82%D0%BE%D1%87%D0%BA%D0%B0_(Hirundo_rustica),_%D0%9C%D0%B5%D0%BB%D0%B8%D1%85%D0%BE%D0%B2%D0%BE.jpg"
       },
       "latin": "Hirundo rustica",
       "famille": "Hirundinidés",
@@ -506,7 +566,11 @@
         "wikipedia": [
           "Canard colvert",
           "en:Anas platyrhynchos"
-        ]
+        ],
+        "src": "img/oiseaux/canard-colvert-photo.jpg",
+        "credit": "This picture was realized by Richard Bartz by using a Canon EF 70-300mm f/4-5.6 IS USM Lens",
+        "license": "CC BY-SA 2.5",
+        "source": "https://commons.wikimedia.org/wiki/File:Anas_platyrhynchos_male_female_quadrat.jpg"
       },
       "latin": "Anas platyrhynchos",
       "famille": "Anatidés",
@@ -525,7 +589,11 @@
         "wikipedia": [
           "Mouette rieuse",
           "en:Chroicocephalus ridibundus"
-        ]
+        ],
+        "src": "img/oiseaux/mouette-rieuse-photo.jpg",
+        "credit": "Diliff",
+        "license": "CC BY 2.5",
+        "source": "https://commons.wikimedia.org/wiki/File:Black-headed_Gull_-_St_James_27s_Park_2C_London_-_Nov_2006_edit2.jpg"
       },
       "latin": "Chroicocephalus ridibundus",
       "famille": "Laridés",
@@ -547,7 +615,11 @@
         "wikipedia": [
           "Rougequeue noir",
           "en:Phoenicurus ochruros"
-        ]
+        ],
+        "src": "img/oiseaux/rougequeue-noir-photo.jpg",
+        "credit": "Rémih",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Phoenicurus_ochruros_@_Calanque_des_Pierres-Tomb%C3%A9es_19.jpg"
       },
       "latin": "Phoenicurus ochruros",
       "famille": "Muscicapidés",
@@ -569,7 +641,11 @@
         "wikipedia": [
           "Grand Cormoran",
           "en:Phalacrocorax carbo"
-        ]
+        ],
+        "src": "img/oiseaux/grand-cormoran-photo.jpg",
+        "credit": "JJ Harrison (https://www.jjharrison.com.au/)",
+        "license": "CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Phalacrocorax_carbo_Vic.jpg"
       },
       "latin": "Phalacrocorax carbo",
       "famille": "Phalacrocoracidés",
