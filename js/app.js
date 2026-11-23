@@ -7,7 +7,7 @@ import { renderEditorHome, renderEditor, renderConnectLink } from './editor.js';
 import { loadList } from './data.js';
 import { cloudEnabled, initCloud, currentUser, onUserChange } from './cloud.js';
 import { renderAccount, renderLeaderboard, renderChallenge, renderAdmin } from './social.js';
-import { loadCategories, childrenOf, pathOf, descendants, categoryOfList } from './categories.js';
+import { loadCategories, childrenOf, pathOf, descendants, categoryOfList, enableExplorer } from './categories.js';
 
 const app = $('#app');
 
@@ -53,8 +53,9 @@ function updateBadge() {
   b.hidden = !n;
 }
 
-const card = l => `
-        <a class="list-card" href="#/liste/${encodeURIComponent(l.id)}">
+const card = (l, admin = false) => `
+        <a class="list-card" href="#/liste/${encodeURIComponent(l.id)}" ${admin ? `draggable="true" data-list="${esc(l.id)}"` : ''}>
+          ${admin ? `<button class="more" data-menu-list="${esc(l.id)}" title="Options" aria-label="Options">⋯</button>` : ''}
           ${safeUrl(l.cover) ? `<img src="${/^https?:/.test(l.cover) ? '' : 'lists/'}${esc(safeUrl(l.cover))}" alt="" loading="lazy">` : ''}
           <h3>${esc(l.title)} ${l.draft ? '<span class="badge-draft">brouillon</span>' : ''}${l.mine ? '<span class="badge-draft">perso</span>' : ''}</h3>
           ${l.description ? `<p class="muted">${esc(l.description)}</p>` : ''}
@@ -64,8 +65,10 @@ const card = l => `
 async function renderHome(el, catId = null) {
   const all = await loadIndex();
   let t = { cats: [], byId: new Map(), listCat: new Map() };
-  try { t = await loadCategories(); } catch (e) { /* catégories pas encore installées */ }
+  let catsReady = true;
+  try { t = await loadCategories(); } catch (e) { catsReady = false; }
   if (catId && !t.byId.has(catId)) catId = null;
+  const admin = !!currentUser()?.isAdmin && catsReady;
   const isPublic = l => !l.draft && !l.mine;
   const inTree = id => {
     const set = descendants(t, id);
@@ -74,22 +77,29 @@ async function renderHome(el, catId = null) {
   const subcats = childrenOf(t, catId);
   const here = all.filter(l => isPublic(l) && categoryOfList(t, l.id) === catId);
   const personal = catId ? [] : all.filter(l => !isPublic(l));
-  const folders = subcats.length ? `<div class="list-grid">${subcats.map(c => `
-      <a class="list-card folder" href="#/c/${c.id}"><h3>📁 ${esc(c.name)}</h3>
-        <p class="small muted">${inTree(c.id)} liste${inTree(c.id) > 1 ? 's' : ''}${childrenOf(t, c.id).length ? ` · ${childrenOf(t, c.id).length} sous-catégorie${childrenOf(t, c.id).length > 1 ? 's' : ''}` : ''}</p></a>`).join('')}</div>` : '';
+  const folderCard = c => {
+    const n = inTree(c.id), k = childrenOf(t, c.id).length;
+    return `<a class="list-card folder" href="#/c/${c.id}" data-drop="${c.id}" ${admin ? `draggable="true" data-folder="${c.id}"` : ''}>
+      ${admin ? `<button class="more" data-menu-folder="${c.id}" title="Options" aria-label="Options">⋯</button>` : ''}
+      <h3>📁 ${esc(c.name)}</h3>
+      <p class="small muted">${n} liste${n > 1 ? 's' : ''}${k ? ` · ${k} dossier${k > 1 ? 's' : ''}` : ''}</p></a>`;
+  };
+  const toolbar = admin ? `<div class="explorer-bar"><button class="btn small" id="new-folder">+ Nouveau dossier</button>
+    <span class="muted small">Glissez une liste sur un dossier pour l’y ranger, ou utilisez ⋯</span></div>` : '';
+  const content = `
+      ${toolbar}
+      ${subcats.length || here.length ? `<div class="list-grid">${subcats.map(folderCard).join('')}${here.map(l => card(l, admin)).join('')}</div>` : ''}`;
+
   if (catId) {
     el.innerHTML = `<section>
-      <nav class="crumbs"><a href="#/">Accueil</a>${pathOf(t, catId).map((c, i, a) => i === a.length - 1 ? ` › <b>${esc(c.name)}</b>` : ` › <a href="#/c/${c.id}">${esc(c.name)}</a>`).join('')}</nav>
-      ${folders}
-      ${here.length ? `<div class="list-grid">${here.map(card).join('')}</div>` : ''}
-      ${!subcats.length && !here.length ? '<div class="empty">Cette catégorie est vide.</div>' : ''}
+      <nav class="crumbs"><a href="#/" data-drop="">Accueil</a>${pathOf(t, catId).map((c, i, a) => i === a.length - 1 ? ` › <b>${esc(c.name)}</b>` : ` › <a href="#/c/${c.id}" data-drop="${c.id}">${esc(c.name)}</a>`).join('')}</nav>
+      ${content}
+      ${!subcats.length && !here.length ? '<div class="empty">Ce dossier est vide.</div>' : ''}
     </section>`;
-    return;
-  }
-  const lists = here;
-  const favs = favorites.all();
-  const due = progress.due();
-  el.innerHTML = `
+  } else {
+    const favs = favorites.all();
+    const due = progress.due();
+    el.innerHTML = `
     <section>
       ${cloudEnabled && !currentUser() ? '<a class="banner soft" href="#/compte">👋 Créez un compte pour vous mesurer à vos potes (classement, défis) et garder vos listes sur tous vos appareils.</a>' : ''}
       ${due.length ? `<a class="banner" href="#/revision">🔁 ${due.length} question${due.length > 1 ? 's' : ''} à revoir aujourd’hui</a>` : ''}
@@ -98,12 +108,13 @@ async function renderHome(el, catId = null) {
           <div class="fav"><a href="#/favori/${f.id}" class="fav-go">▶ ${esc(f.name)}</a>
           <button class="icon-btn" data-del="${f.id}" title="Supprimer">✕</button></div>`).join('')}</div>` : ''}
       <h2>Listes</h2>
-      ${folders}
-      ${lists.length ? `${subcats.length ? '<h3 class="sub-h">Autres listes</h3>' : ''}<div class="list-grid">${lists.map(card).join('')}</div>` : ''}
-      ${!subcats.length && !lists.length && !personal.length ? '<div class="empty">Aucune liste trouvée. Créez-en une dans l’<a href="#/editeur">éditeur</a>.</div>' : ''}
-      ${personal.length ? `<h2>Mes listes</h2><div class="list-grid">${personal.map(card).join('')}</div>` : ''}
+      ${content}
+      ${!subcats.length && !here.length && !personal.length ? '<div class="empty">Aucune liste trouvée. Créez-en une dans l’<a href="#/editeur">éditeur</a>.</div>' : ''}
+      ${personal.length ? `<h2>Mes listes</h2><div class="list-grid">${personal.map(l => card(l)).join('')}</div>` : ''}
     </section>`;
-  $$('[data-del]', el).forEach(b => b.onclick = () => { favorites.remove(b.dataset.del); renderHome(el); });
+    $$('[data-del]', el).forEach(b => b.onclick = () => { favorites.remove(b.dataset.del); renderHome(el); });
+  }
+  if (admin) enableExplorer(el, t, catId, all.filter(isPublic), () => renderHome(el, catId));
 }
 
 async function renderFavorite(el, id) {

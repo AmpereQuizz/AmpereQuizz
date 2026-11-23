@@ -7,8 +7,6 @@ import {
   leaderboard, listLeaderboard, playedLists, recentScores, recentChallenges, getChallenge, challengeResults,
   allUsers, setAdmin,
 } from './cloud.js';
-import { loadIndex } from './data.js';
-import { renderCategoryAdmin } from './categories.js';
 
 const disabledHTML = '<div class="empty">Les comptes ne sont pas encore activés sur ce site.</div>';
 
@@ -192,7 +190,7 @@ export async function renderAdmin(el) {
       <p class="muted">${users.length} utilisateur${users.length > 1 ? 's' : ''} inscrit${users.length > 1 ? 's' : ''} · ${admins} admin${admins > 1 ? 's' : ''}.
       Un admin peut publier, modifier et retirer les listes du site depuis l’éditeur.
       Seul le super admin peut nommer ou retirer un admin, et personne ne peut retirer le super admin.</p></div>
-    <div id="cat-admin"></div>
+    <p class="hint">📁 Les dossiers se gèrent directement sur l’<a href="#/">accueil</a> : bouton « + Nouveau dossier », menu ⋯ sur chaque dossier ou liste, et glisser-déposer.</p>
     <h2>Utilisateurs</h2>
     <div class="table-wrap"><table class="users">
       <thead><tr><th>Pseudo</th><th>Inscrit le</th><th>Parties</th><th>Points</th><th>Rôle</th></tr></thead>
@@ -206,7 +204,6 @@ export async function renderAdmin(el) {
             : me.isSuper ? `<button class="btn small" data-id="${u.id}" data-v="1">Rendre admin</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table></div>
   </section>`;
-  loadIndex().then(all => renderCategoryAdmin($('#cat-admin', el), all.filter(l => !l.draft && !l.mine)));
   $$('[data-id]', el).forEach(b => b.onclick = async () => {
     const value = b.dataset.v === '1';
     const user = users.find(u => u.id === b.dataset.id);
