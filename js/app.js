@@ -84,7 +84,9 @@ async function renderHome(el, catId = null) {
       <h3>📁 ${esc(c.name)}</h3>
       <p class="small muted">${n} liste${n > 1 ? 's' : ''}${k ? ` · ${k} dossier${k > 1 ? 's' : ''}` : ''}</p></a>`;
   };
-  const toolbar = admin ? `<div class="explorer-bar"><button class="btn small" id="new-folder">+ Nouveau dossier</button>
+  const toolbar = currentUser()?.isAdmin && !catsReady
+    ? '<div class="banner">📁 Les dossiers ne sont pas encore activés : collez le bloc SQL des catégories dans Supabase (SQL Editor → Run), puis rechargez la page.</div>'
+    : admin ? `<div class="explorer-bar"><button class="btn small" id="new-folder">+ Nouveau dossier</button>
     <span class="muted small">Glissez une liste sur un dossier pour l’y ranger, ou utilisez ⋯</span></div>` : '';
   const content = `
       ${toolbar}
