@@ -1,6 +1,7 @@
 // Chargement des listes (dépôt + brouillons locaux) et lecture des cellules.
 import { esc, slugify, formatDate, formatNumber, parseDate } from './util.js';
 import { drafts } from './store.js';
+import { currentUser, myLists, getMyList, getChallenge } from './cloud.js';
 
 export const TYPES = {
   text: 'Texte',
@@ -35,7 +36,16 @@ export async function loadIndex() {
     count: (d.rows || []).length,
     draft: true,
   }));
-  return [...indexCache, ...local];
+  let mine = [];
+  if (currentUser()) {
+    try {
+      mine = (await myLists()).map(l => ({
+        id: 'perso:' + l.id, title: l.title, description: l.data?.description || '',
+        count: (l.data?.rows || []).length, mine: true,
+      }));
+    } catch (e) { console.warn('Listes perso indisponibles', e); }
+  }
+  return [...indexCache, ...mine, ...local];
 }
 
 export async function loadList(id) {
@@ -43,6 +53,16 @@ export async function loadList(id) {
     const d = drafts.get(id.slice(10));
     if (!d) throw new Error('Brouillon introuvable');
     return prepare(structuredClone(d), id, 'lists/');
+  }
+  if (id.startsWith('perso:')) {
+    const l = await getMyList(id.slice(6));
+    if (!l) throw new Error('Liste introuvable (êtes-vous connecté au bon compte ?)');
+    return prepare(structuredClone(l.data), id, 'lists/');
+  }
+  if (id.startsWith('defi:')) {
+    const c = await getChallenge(id.slice(5));
+    if (!c?.list_snapshot) throw new Error('Défi introuvable');
+    return prepare(structuredClone(c.list_snapshot), id, 'lists/');
   }
   if (!listCache.has(id)) {
     const res = await fetch(`lists/${encodeURIComponent(id)}.json`, { cache: 'no-cache' });

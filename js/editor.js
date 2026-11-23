@@ -3,6 +3,8 @@ import { $, $$, esc, slugify, toast } from './util.js';
 import { loadIndex, TYPES, textOf, mediaInfo, isEmpty } from './data.js';
 import { drafts } from './store.js';
 import { connection, connect, disconnect, commitFiles, readFile, guessRepo } from './github.js';
+import { cloudEnabled, currentUser, saveMyList, getMyList, deleteMyList } from './cloud.js';
+import { askLogin } from './social.js';
 
 const newDraftId = () => 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -10,26 +12,45 @@ const newDraftId = () => 'd' + Date.now().toString(36) + Math.random().toString(
 
 export async function renderEditorHome(el) {
   const all = Object.values(drafts.all());
-  const index = (await loadIndex()).filter(l => !l.draft);
+  const everything = await loadIndex();
+  const index = everything.filter(l => !l.draft && !l.mine);
+  const mine = everything.filter(l => l.mine);
   const conn = connection();
+  const me = currentUser();
   el.innerHTML = `<section>
     <div class="page-head"><h1>Éditeur de listes</h1>
-      <p class="muted">Créez ou modifiez une liste, puis « Enregistrer sur le site » : elle apparaît sur tous vos appareils environ une minute après.</p></div>
-    ${connectPanel(conn)}
+      <p class="muted">${me ? 'Vos listes perso sont privées et vous suivent sur tous vos appareils.'
+        : cloudEnabled ? '<a href="#/compte">Connectez-vous</a> pour garder vos listes sur tous vos appareils. Sans compte, elles restent sur cet appareil.'
+        : 'Les listes restent sur cet appareil tant qu’elles ne sont pas enregistrées.'}</p></div>
+    ${conn ? connectPanel(conn) : ''}
     <div class="actions">
       <button class="btn primary" id="new">+ Nouvelle liste</button>
       <label class="btn">Importer un .json<input type="file" accept=".json,application/json" id="import" hidden></label>
     </div>
-    ${index.length ? `<div class="panel"><h2>Listes du site</h2>
+    ${mine.length ? `<div class="panel"><h2>Mes listes perso</h2>
+      <div class="chips">${mine.map(l => `<button class="chip" data-mine="${esc(l.id.slice(6))}">✎ ${esc(l.title)}</button>`).join('')}</div></div>` : ''}
+    ${conn && index.length ? `<div class="panel"><h2>Listes du site (pour tout le monde)</h2>
       <p class="hint">Choisissez une liste pour la modifier.</p>
       <div class="chips">${index.map(l => `<button class="chip" data-copy="${esc(l.id)}">✎ ${esc(l.title)}</button>`).join('')}</div></div>` : ''}
     <h2>En cours sur cet appareil</h2>
     ${all.length ? `<div class="list-grid">${all.map(d => `
       <a class="list-card" href="#/editeur/${d._draftId}">
         <h3>${esc(d.title || 'Sans titre')}</h3>
-        <p class="small muted">${(d.rows || []).length} fiches · ${d._publishedAt && !d._dirty ? '✓ enregistrée sur le site' : 'pas encore enregistrée sur le site'}</p>
+        <p class="small muted">${(d.rows || []).length} fiches · ${!d._dirty && d._publishedAt ? '✓ publiée sur le site' : !d._dirty && d._cloudId ? '✓ dans mes listes' : 'pas encore enregistrée'}</p>
       </a>`).join('')}</div>` : '<div class="empty">Rien en cours.</div>'}
+    ${conn ? '' : `<details class="panel admin"><summary>Publier des listes pour tout le monde (administrateur du site)</summary>${connectPanel(null)}</details>`}
   </section>`;
+  $$('[data-mine]', el).forEach(b => b.onclick = async () => {
+    const cid = b.dataset.mine;
+    const existing = Object.values(drafts.all()).find(x => x._cloudId === cid);
+    if (existing?._dirty) { location.hash = '#/editeur/' + existing._draftId; return; }
+    if (existing) drafts.remove(existing._draftId);
+    const l = await getMyList(cid);
+    if (!l) { toast('Liste introuvable', 'err'); return; }
+    const data = { ...l.data, _cloudId: cid, _draftId: newDraftId() };
+    drafts.save(data);
+    location.hash = '#/editeur/' + data._draftId;
+  });
 
   bindConnect(el, () => renderEditorHome(el));
   $('#new', el).onclick = () => {
@@ -189,18 +210,19 @@ export function renderEditor(el, draftId) {
       <div class="panel">
         <h2>Enregistrer</h2>
         <div class="actions">
-          ${connection()
-            ? `<button class="btn primary big" id="publish">💾 Enregistrer sur le site</button>`
-            : `<a class="btn primary" href="#/editeur">Connecter cet appareil pour enregistrer sur le site</a>`}
+          ${currentUser() && !d._origin ? `<button class="btn primary big" id="save-mine">💾 Enregistrer dans mes listes</button>` : ''}
+          ${connection() ? `<button class="btn ${currentUser() && !d._origin ? '' : 'primary big'}" id="publish">🌍 Publier sur le site pour tout le monde</button>` : ''}
+          ${!currentUser() && !connection() && cloudEnabled ? `<button class="btn primary" id="login-save">Se connecter pour enregistrer</button>` : ''}
           <a class="btn" href="#/liste/brouillon:${d._draftId}">▶ Essayer</a>
         </div>
-        <p class="hint" id="pub-msg">${d._publishedAt ? (d._dirty ? 'Modifications pas encore enregistrées sur le site.' : '✓ Enregistrée sur le site.') : 'Tant qu’elle n’est pas enregistrée sur le site, la liste n’existe que sur cet appareil.'}</p>
+        <p class="hint" id="pub-msg">${statusText()}</p>
         <details class="gh"><summary>Autres options</summary>
           <div class="actions">
             <button class="btn" id="dl-zip">Télécharger (.zip avec images)</button>
             <button class="btn" id="dl-json">Télécharger le .json seul</button>
             <button class="btn ghost" id="del">Abandonner ce brouillon</button>
             ${d._origin && connection() ? `<button class="btn ghost danger" id="unpublish">Supprimer la liste du site</button>` : ''}
+            ${d._cloudId && currentUser() ? `<button class="btn ghost danger" id="del-mine">Supprimer de mes listes</button>` : ''}
           </div>
         </details>
       </div>
@@ -367,8 +389,47 @@ export function renderEditor(el, draftId) {
     bindPublish();
   }
 
+  function statusText() {
+    if (d._dirty) return d._cloudId || d._publishedAt ? 'Modifications pas encore enregistrées.' : 'Pas encore enregistrée : pour l’instant elle n’existe que sur cet appareil.';
+    if (d._publishedAt) return '✓ Publiée sur le site.';
+    if (d._cloudId) return '✓ Enregistrée dans mes listes (visible sur tous mes appareils).';
+    return 'Pas encore enregistrée : pour l’instant elle n’existe que sur cet appareil.';
+  }
+
   function bindPublish() {
     const msg = $('#pub-msg', el);
+    const ls = $('#login-save', el);
+    if (ls) ls.onclick = () => askLogin('#/editeur/' + d._draftId);
+    const sm = $('#save-mine', el);
+    if (sm) sm.onclick = async () => {
+      if (!d.title?.trim()) { msg.textContent = 'Donnez d’abord un titre à la liste.'; $('[data-meta="title"]', el).focus(); return; }
+      sm.disabled = true;
+      try {
+        msg.textContent = 'Préparation des images…';
+        const { json } = await exportList(d, false);
+        const data = JSON.parse(json);
+        await resolveWikipediaImages(data, t => { msg.textContent = t; });
+        msg.textContent = 'Enregistrement…';
+        d._cloudId = await saveMyList(d._cloudId, data);
+        Object.assign(d, { columns: data.columns, rows: data.rows, _dirty: false });
+        drafts.save(d);
+        render();
+        toast('Enregistrée dans mes listes');
+      } catch (e) {
+        msg.textContent = 'Échec de l’enregistrement : ' + e.message;
+        sm.disabled = false;
+      }
+    };
+    const dm = $('#del-mine', el);
+    if (dm) dm.onclick = async () => {
+      if (!dm.dataset.confirm) { dm.dataset.confirm = 1; dm.textContent = 'Cliquer encore pour supprimer'; return; }
+      try {
+        await deleteMyList(d._cloudId);
+        drafts.remove(d._draftId);
+        toast('Liste supprimée');
+        location.hash = '#/editeur';
+      } catch (e) { msg.textContent = 'Échec : ' + e.message; }
+    };
     const pub = $('#publish', el);
     if (pub) pub.onclick = async () => {
       if (!d.title?.trim()) { msg.textContent = 'Donnez d’abord un titre à la liste.'; $('[data-meta="title"]', el).focus(); return; }
@@ -552,4 +613,33 @@ export function makeZip(files) {
   let p = 0;
   for (const c of all) { out.set(c, p); p += c.length; }
   return out;
+}
+
+// Pour les listes perso (pas de déploiement GitHub) : on récupère l'image Wikipédia directement depuis le navigateur.
+async function resolveWikipediaImages(list, say) {
+  const cols = list.columns.filter(c => c.type === 'image');
+  for (const row of list.rows) {
+    for (const c of cols) {
+      const v = row[c.key];
+      if (!v || typeof v !== 'object' || v.src || !v.wikipedia) continue;
+      for (const ref of [].concat(v.wikipedia)) {
+        const m = String(ref).match(/^([a-z]{2,3}):(.+)$/);
+        const lang = m ? m[1] : 'fr', title = m ? m[2] : ref;
+        try {
+          say(`Image Wikipédia : ${title}…`);
+          const api = `https://${lang}.wikipedia.org/w/api.php?format=json&formatversion=2&origin=*&action=query`;
+          const q = await (await fetch(`${api}&prop=pageimages&piprop=name&redirects=1&titles=${encodeURIComponent(title)}`)).json();
+          const file = q.query?.pages?.[0]?.pageimage;
+          if (!file) continue;
+          const info = await (await fetch(`${api}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=800&titles=${encodeURIComponent('File:' + file)}`)).json();
+          const ii = info.query?.pages?.[0]?.imageinfo?.[0];
+          if (!ii) continue;
+          const strip = h => { const t = document.createElement('div'); t.innerHTML = h || ''; return t.textContent.trim(); };
+          row[c.key] = { ...v, src: ii.thumburl || ii.url, credit: strip(ii.extmetadata?.Artist?.value) || 'Auteur inconnu',
+            license: strip(ii.extmetadata?.LicenseShortName?.value), source: ii.descriptionurl };
+          break;
+        } catch (e) { console.warn('Image Wikipédia introuvable', ref, e); }
+      }
+    }
+  }
 }

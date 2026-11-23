@@ -5,6 +5,8 @@ import { progress, history, favorites } from './store.js';
 import { renderSetup, renderReview, clearKeys, startSession } from './quiz.js';
 import { renderEditorHome, renderEditor, renderConnectLink } from './editor.js';
 import { loadList } from './data.js';
+import { cloudEnabled, initCloud, currentUser, onUserChange } from './cloud.js';
+import { renderAccount, renderLeaderboard, renderChallenge } from './social.js';
 
 const app = $('#app');
 
@@ -17,6 +19,9 @@ const routes = [
   [/^#\/editeur$/, renderEditorHome],
   [/^#\/connexion\/([^/]+)\/(.+)$/, renderConnectLink],
   [/^#\/editeur\/(.+)$/, (el, id) => renderEditor(el, decodeURIComponent(id))],
+  [/^#\/compte$/, renderAccount],
+  [/^#\/classement(?:\/(\w+))?$/, (el, tab) => renderLeaderboard(el, tab || 'general')],
+  [/^#\/defi\/([\w-]+)$/, renderChallenge],
 ];
 
 async function route() {
@@ -51,6 +56,7 @@ async function renderHome(el) {
   const due = progress.due();
   el.innerHTML = `
     <section>
+      ${cloudEnabled && !currentUser() ? '<a class="banner soft" href="#/compte">👋 Créez un compte pour vous mesurer à vos potes (classement, défis) et garder vos listes sur tous vos appareils.</a>' : ''}
       ${due.length ? `<a class="banner" href="#/revision">🔁 ${due.length} question${due.length > 1 ? 's' : ''} à revoir aujourd’hui</a>` : ''}
       ${favs.length ? `<h2>Mes combinaisons</h2>
         <div class="fav-list">${favs.map(f => `
@@ -60,7 +66,7 @@ async function renderHome(el) {
       ${lists.length ? `<div class="list-grid">${lists.map(l => `
         <a class="list-card" href="#/liste/${encodeURIComponent(l.id)}">
           ${l.cover ? `<img src="lists/${esc(l.cover)}" alt="" loading="lazy">` : ''}
-          <h3>${esc(l.title)} ${l.draft ? '<span class="badge-draft">brouillon</span>' : ''}</h3>
+          <h3>${esc(l.title)} ${l.draft ? '<span class="badge-draft">brouillon</span>' : ''}${l.mine ? '<span class="badge-draft">perso</span>' : ''}</h3>
           ${l.description ? `<p class="muted">${esc(l.description)}</p>` : ''}
           <p class="small muted">${l.count} fiches${l.columns ? ' · ' + l.columns.map(esc).join(', ') : ''}</p>
         </a>`).join('')}</div>`
@@ -109,10 +115,19 @@ function renderHistory(el) {
   };
 }
 
+function updateAccount() {
+  const a = $('#account-link');
+  if (!a) return;
+  a.hidden = !cloudEnabled;
+  $('#rank-link').hidden = !cloudEnabled;
+  a.textContent = currentUser() ? '👤 ' + currentUser().username : 'Se connecter';
+}
+onUserChange(updateAccount);
+
 window.addEventListener('hashchange', route);
 // Un lien vers la page courante (ex. « Changer les réglages » pendant un quiz) recharge la vue.
 document.addEventListener('click', e => {
   const a = e.target.closest('a[href^="#"]');
   if (a && a.getAttribute('href') === (location.hash || '#/')) { e.preventDefault(); route(); }
 });
-route();
+initCloud().catch(e => console.warn('Comptes indisponibles', e)).finally(() => { updateAccount(); route(); });

@@ -3,6 +3,7 @@ import { $, $$, esc, shuffle, sample, matchText, parseNumber, parseUserDate, par
 import { loadList, loadIndex, display, sortKey, mediaInfo, mediaHTML, cardHTML, isEmpty, textOf,
   filterColumns, allTags, applyFilters } from './data.js';
 import { progress, history, favorites, lastConfig } from './store.js';
+import { cloudEnabled, currentUser, submitScore, createChallenge } from './cloud.js';
 
 let keyHandler = null;
 export function clearKeys() {
@@ -103,6 +104,7 @@ export async function renderSetup(el, listId, preset = null) {
         <button class="btn primary big" id="go">Commencer</button>
         ${pending ? `<a class="btn" href="#/revision/${encodeURIComponent(listId)}">Revoir mes erreurs (${pending})</a>` : ''}
         <button class="btn ghost" id="save-fav">☆ Enregistrer la combinaison</button>
+        ${cloudEnabled && currentUser() && !listId.startsWith('brouillon:') ? '<button class="btn ghost" id="dare">⚔️ Créer un défi</button>' : ''}
       </div>
 
       <details class="panel browse">
@@ -179,6 +181,16 @@ export async function renderSetup(el, listId, preset = null) {
     lastConfig.set(listId, cfg);
     startSession(el, list, cfg);
   });
+  const dareBtn = $('#dare', el);
+  if (dareBtn) dareBtn.onclick = async () => {
+    const qs = buildQuestions(list, cfg);
+    if (!qs.length) { toast('Aucune question possible avec ces réglages', 'err'); return; }
+    dareBtn.disabled = true;
+    try {
+      lastConfig.set(listId, cfg);
+      location.hash = '#/defi/' + await makeChallenge(list, cfg, qs);
+    } catch (e) { toast('Défi non créé : ' + e.message, 'err'); dareBtn.disabled = false; }
+  };
   $('#save-fav', el).addEventListener('click', () => {
     const btn = $('#save-fav', el);
     const lbl = c => list.columns.find(x => x.key === c)?.label;
@@ -253,18 +265,18 @@ function buildChoices(list, col, row, pool) {
       const k = choiceKey(list, col, v);
       if (seen.has(k)) continue;
       seen.add(k);
-      opts.push(v);
+      opts.push({ v, rowId: r._id });
     }
   };
   fromRows(pool);
   fromRows(list.rows);
-  const all = shuffle([{ v: correct, ok: true }, ...opts.map(v => ({ v, ok: false }))]);
+  const all = shuffle([{ v: correct, ok: true, rowId: row._id }, ...opts.map(o => ({ ...o, ok: false }))]);
   return all;
 }
 
 // ======================= Déroulé =======================
 
-export function startSession(el, list, cfg, { questions = null, review = false } = {}) {
+export function startSession(el, list, cfg, { questions = null, review = false, challenge = null } = {}) {
   const qs = questions || buildQuestions(list, cfg);
   if (!qs.length) { toast('Aucune question possible avec ces réglages', 'err'); return; }
   const pool = applyFilters(list, cfg.filters || {});
@@ -302,7 +314,7 @@ export function startSession(el, list, cfg, { questions = null, review = false }
             return `<label class="answer" data-key="${esc(c.key)}"><span class="lbl">${esc(c.label)} ?</span>
               <input name="${esc(c.key)}" ${c.type === 'number' ? 'inputmode="decimal"' : ''} placeholder="${esc(ph)}" ${idx === 0 ? 'autofocus' : ''} autocapitalize="off" spellcheck="false"></label>`;
           }
-          const choices = q.choices[c.key] = buildChoices(list, c, q.row, pool);
+          const choices = q.choices[c.key] = q.fixedChoices?.[c.key] || buildChoices(list, c, q.row, pool);
           return `<div class="answer" data-key="${esc(c.key)}"><span class="lbl">${esc(c.label)} ?</span>
             <div class="choices ${isMedia(c) ? 'media-choices' : ''}">
               ${choices.map((o, i) => `<button type="button" class="choice" data-i="${i}">${isMedia(c) ? mediaHTML(list, c, o.v) : esc(display(c, o.v))}</button>`).join('')}
@@ -474,28 +486,51 @@ export function startSession(el, list, cfg, { questions = null, review = false }
     clearKeys();
     const done = state.results.length;
     const lbl = k => col(k)?.label || k;
+    const seconds = Math.round((Date.now() - state.start) / 1000);
+    const exercise = exerciseLabel(list, cfg);
+    let sent = null;
     if (done) {
       history.add({
         listId: list.id, listTitle: list.title, mode: cfg.mode, review,
         show: (cfg.show || []).map(lbl), find: cfg.mode === 'chrono' ? [lbl(cfg.orderCol)] : (cfg.find || []).map(lbl),
-        score: state.score, total: done, seconds: Math.round((Date.now() - state.start) / 1000),
+        score: state.score, total: done, seconds,
       });
+      // Score en ligne (classement) : pas pour les révisions ni les brouillons.
+      // Pour un défi, le total compte toutes les questions, même si on arrête avant la fin.
+      if (currentUser() && !review && !list.id.startsWith('brouillon:')) {
+        sent = submitScore({
+          listId: challenge ? challenge.listId : list.id, listTitle: list.title, mode: cfg.mode, exercise,
+          score: state.score, total: challenge ? qs.length : done, seconds, challengeId: challenge?.id,
+        }).then(() => true).catch(e => { toast('Score non envoyé : ' + e.message, 'err'); return false; });
+      }
     }
     const missed = state.results.filter(r => !r.ok);
     const pct = done ? Math.round(state.score / done * 100) : 0;
     el.innerHTML = `<section class="result">
       <h1>${done ? `${state.score} / ${done}` : 'Entraînement arrêté'}</h1>
       ${done ? `<div class="ring" style="--p:${pct}"><span>${pct} %</span></div>` : ''}
-      <p class="muted">${list.title}${review ? ' · révision' : ''}</p>
+      <p class="muted">${esc(list.title)}${review ? ' · révision' : ''}${challenge ? ' · défi' : ''}</p>
+      ${challenge ? `<div class="actions center"><a class="btn primary" href="#/defi/${esc(challenge.id)}">🏆 Voir le classement du défi</a></div>` : `
       <div class="actions center">
         <button class="btn primary" id="again">Recommencer</button>
         ${missed.length && !missed[0].chrono ? `<button class="btn" id="retry">Refaire les ${missed.length} ratée${missed.length > 1 ? 's' : ''}</button>` : ''}
         <a class="btn ghost" href="#/liste/${encodeURIComponent(list.id)}">Changer les réglages</a>
       </div>
+      ${currentUser() && !review && done === qs.length ? `<div class="actions center"><button class="btn" id="dare">⚔️ Défier mes potes avec ces questions</button></div>` : ''}`}
       ${missed.length && !missed[0].chrono ? `<h2>À revoir</h2><p class="hint">Elles reviendront aussi dans « Révision » selon un calendrier espacé.</p>
         <div class="cards">${missed.map(r => cardHTML(list, r.row, r.find)).join('')}</div>` : ''}
     </section>`;
-    $('#again', el).onclick = () => startSession(el, list, cfg, { questions: questions ? shuffle(questions) : null, review });
+    const dare = $('#dare', el);
+    if (dare) dare.onclick = async () => {
+      dare.disabled = true;
+      try {
+        const id = await makeChallenge(list, cfg, qs);
+        if (sent && await sent) await submitScore({ listId: list.id, listTitle: list.title, mode: cfg.mode, exercise, score: state.score, total: qs.length, seconds, challengeId: id }).catch(() => {});
+        location.hash = '#/defi/' + id;
+      } catch (e) { toast('Défi non créé : ' + e.message, 'err'); dare.disabled = false; }
+    };
+    const again = $('#again', el);
+    if (again) again.onclick = () => startSession(el, list, cfg, { questions: questions ? shuffle(questions) : null, review });
     const retry = $('#retry', el);
     if (retry) retry.onclick = () => startSession(el, list, cfg, {
       questions: shuffle(missed.map(r => ({ kind: 'q', row: r.row, show: r.show, find: r.find }))), review,
@@ -548,4 +583,60 @@ export async function renderReview(el, onlyList = null) {
     if (!qs.length) { toast('Ces fiches n’existent plus dans la liste', 'err'); return; }
     startSession(el, list, { mode: b.dataset.mode, show: [], find: [], filters: {} }, { questions: qs, review: true });
   });
+}
+
+// ======================= Défis =======================
+
+const MODES = { qcm: 'Choix multiple', libre: 'Saisie libre', chrono: 'Ordre' };
+
+export function exerciseLabel(list, cfg) {
+  const lbl = k => list.columns.find(c => c.key === k)?.label || k;
+  if (cfg.mode === 'chrono') return `Ordre · ${lbl(cfg.orderCol)}`;
+  if (!cfg.find?.length) return MODES[cfg.mode] || cfg.mode;
+  return `${MODES[cfg.mode] || cfg.mode} · ${(cfg.show || []).map(lbl).join(' + ') || '…'} → ${cfg.find.map(lbl).join(' + ')}`;
+}
+
+// Fige les questions (et les propositions des choix multiples) pour que tout le monde ait les mêmes.
+export async function makeChallenge(list, cfg, qs) {
+  const pool = applyFilters(list, cfg.filters || {});
+  const out = qs.map(q => {
+    if (q.kind === 'chrono') return { k: 'chrono', r: q.rows.map(r => r._id), o: q.orderCol, s: q.show };
+    const c = {};
+    for (const key of q.find) {
+      const col = list.columns.find(x => x.key === key);
+      if (!col) continue;
+      if (cfg.mode === 'qcm' || isMedia(col)) {
+        const choices = q.choices?.[key] || buildChoices(list, col, q.row, pool);
+        c[key] = choices.map(o => ({ r: o.rowId, ok: o.ok }));
+      }
+    }
+    return { k: 'q', r: q.row._id, s: q.show, f: q.find, c };
+  });
+  const isPrivate = /^(perso|brouillon|defi):/.test(list.id);
+  const snapshot = isPrivate ? {
+    title: list.title, description: list.description, columns: list.columns,
+    rows: list.rows.map(({ _id, ...r }) => ({ ...r, id: _id })),
+  } : null;
+  return createChallenge({
+    title: `${list.title} · ${exerciseLabel(list, cfg)}`,
+    listId: list.id.startsWith('defi:') ? list.id : list.id,
+    snapshot, config: { mode: cfg.mode, show: cfg.show, find: cfg.find, orderCol: cfg.orderCol }, questions: out,
+  });
+}
+
+export function challengeQuestions(list, questions) {
+  const byId = new Map(list.rows.map(r => [r._id, r]));
+  return questions.map(q => {
+    if (q.k === 'chrono') {
+      const rows = q.r.map(id => byId.get(id)).filter(Boolean);
+      return rows.length >= 2 ? { kind: 'chrono', rows, orderCol: q.o, show: q.s || [] } : null;
+    }
+    const row = byId.get(q.r);
+    if (!row) return null;
+    const fixedChoices = {};
+    for (const [key, opts] of Object.entries(q.c || {})) {
+      fixedChoices[key] = opts.filter(o => byId.has(o.r)).map(o => ({ v: byId.get(o.r)[key], ok: o.ok, rowId: o.r }));
+    }
+    return { kind: 'q', row, show: q.s || [], find: q.f || [], fixedChoices };
+  }).filter(Boolean);
 }
