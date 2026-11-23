@@ -1,0 +1,464 @@
+{
+  "title": "Rois de France",
+  "description": "De Hugues Capet à Louis-Philippe : 36 rois, leurs surnoms, dynasties et dates de règne.",
+  "columns": [
+    {
+      "key": "nom",
+      "label": "Roi",
+      "type": "text"
+    },
+    {
+      "key": "surnom",
+      "label": "Surnom",
+      "type": "text",
+      "filter": false
+    },
+    {
+      "key": "debut",
+      "label": "Début du règne",
+      "type": "date"
+    },
+    {
+      "key": "fin",
+      "label": "Fin du règne",
+      "type": "date"
+    },
+    {
+      "key": "dynastie",
+      "label": "Dynastie",
+      "type": "text"
+    },
+    {
+      "key": "evenement",
+      "label": "À retenir",
+      "type": "text",
+      "filter": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "hugues-capet",
+      "nom": "Hugues Capet",
+      "debut": "987",
+      "fin": "996",
+      "dynastie": "Capétiens directs",
+      "evenement": "Élu roi par les grands du royaume, fondateur de la dynastie capétienne",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "robert-ii",
+      "nom": "Robert II",
+      "surnom": "le Pieux",
+      "debut": "996",
+      "fin": "1031",
+      "dynastie": "Capétiens directs",
+      "evenement": "Excommunié pour un mariage jugé incestueux",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "henri-ier",
+      "nom": "Henri Ier",
+      "debut": "1031",
+      "fin": "1060",
+      "dynastie": "Capétiens directs",
+      "evenement": "Épouse Anne de Kiev",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "philippe-ier",
+      "nom": "Philippe Ier",
+      "debut": "1060",
+      "fin": "1108",
+      "dynastie": "Capétiens directs",
+      "evenement": "Règne pendant la première croisade, à laquelle il ne participe pas",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "louis-vi",
+      "nom": "Louis VI",
+      "surnom": "le Gros",
+      "debut": "1108",
+      "fin": "1137",
+      "dynastie": "Capétiens directs",
+      "evenement": "Soumet les seigneurs pillards d'Île-de-France, conseillé par l'abbé Suger",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "louis-vii",
+      "nom": "Louis VII",
+      "surnom": "le Jeune",
+      "debut": "1137",
+      "fin": "1180",
+      "dynastie": "Capétiens directs",
+      "evenement": "Divorce d'Aliénor d'Aquitaine, qui épouse ensuite Henri II Plantagenêt",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "philippe-ii",
+      "nom": "Philippe II",
+      "surnom": "Auguste",
+      "debut": "1180",
+      "fin": "1223",
+      "dynastie": "Capétiens directs",
+      "evenement": "Victoire de Bouvines (1214)",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "louis-viii",
+      "nom": "Louis VIII",
+      "surnom": "le Lion",
+      "debut": "1223",
+      "fin": "1226",
+      "dynastie": "Capétiens directs",
+      "evenement": "Croisade contre les Albigeois",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "louis-ix",
+      "nom": "Louis IX",
+      "surnom": "Saint Louis",
+      "debut": "1226",
+      "fin": "1270",
+      "dynastie": "Capétiens directs",
+      "evenement": "Croisades ; meurt devant Tunis, canonisé en 1297",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "philippe-iii",
+      "nom": "Philippe III",
+      "surnom": "le Hardi",
+      "debut": "1270",
+      "fin": "1285",
+      "dynastie": "Capétiens directs",
+      "evenement": "Croisade d'Aragon",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "philippe-iv",
+      "nom": "Philippe IV",
+      "surnom": "le Bel",
+      "debut": "1285",
+      "fin": "1314",
+      "dynastie": "Capétiens directs",
+      "evenement": "Procès des Templiers ; conflit avec le pape Boniface VIII",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "louis-x",
+      "nom": "Louis X",
+      "surnom": "le Hutin",
+      "debut": "1314",
+      "fin": "1316",
+      "dynastie": "Capétiens directs",
+      "evenement": "Affaire de la tour de Nesle (son épouse Marguerite de Bourgogne)",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "jean-ier",
+      "nom": "Jean Ier",
+      "surnom": "le Posthume",
+      "debut": "1316",
+      "fin": "1316",
+      "dynastie": "Capétiens directs",
+      "evenement": "Roi dès sa naissance, ne vit que cinq jours",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "philippe-v",
+      "nom": "Philippe V",
+      "surnom": "le Long",
+      "debut": "1316",
+      "fin": "1322",
+      "dynastie": "Capétiens directs",
+      "evenement": "Les femmes sont écartées de la succession au trône",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "charles-iv",
+      "nom": "Charles IV",
+      "surnom": "le Bel",
+      "debut": "1322",
+      "fin": "1328",
+      "dynastie": "Capétiens directs",
+      "evenement": "Dernier Capétien direct : sa mort ouvre la succession des Valois",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "philippe-vi",
+      "nom": "Philippe VI",
+      "surnom": "de Valois",
+      "debut": "1328",
+      "fin": "1350",
+      "dynastie": "Valois",
+      "evenement": "Début de la guerre de Cent Ans ; défaite de Crécy (1346)",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "jean-ii",
+      "nom": "Jean II",
+      "surnom": "le Bon",
+      "debut": "1350",
+      "fin": "1364",
+      "dynastie": "Valois",
+      "evenement": "Fait prisonnier par les Anglais à Poitiers (1356)",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "charles-v",
+      "nom": "Charles V",
+      "surnom": "le Sage",
+      "debut": "1364",
+      "fin": "1380",
+      "dynastie": "Valois",
+      "evenement": "Reconquête avec Du Guesclin ; construction de la Bastille",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "charles-vi",
+      "nom": "Charles VI",
+      "surnom": "le Fol",
+      "debut": "1380",
+      "fin": "1422",
+      "dynastie": "Valois",
+      "evenement": "Folie du roi ; traité de Troyes (1420) ; défaite d'Azincourt (1415)",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "charles-vii",
+      "nom": "Charles VII",
+      "surnom": "le Victorieux",
+      "debut": "1422",
+      "fin": "1461",
+      "dynastie": "Valois",
+      "evenement": "Jeanne d'Arc ; sacre à Reims (1429) ; fin de la guerre de Cent Ans",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "louis-xi",
+      "nom": "Louis XI",
+      "surnom": "le Prudent",
+      "debut": "1461",
+      "fin": "1483",
+      "dynastie": "Valois",
+      "evenement": "Lutte contre Charles le Téméraire, duc de Bourgogne",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "charles-viii",
+      "nom": "Charles VIII",
+      "surnom": "l'Affable",
+      "debut": "1483",
+      "fin": "1498",
+      "dynastie": "Valois",
+      "evenement": "Début des guerres d'Italie",
+      "tags": [
+        "Moyen Âge"
+      ]
+    },
+    {
+      "id": "louis-xii",
+      "nom": "Louis XII",
+      "surnom": "le Père du peuple",
+      "debut": "1498",
+      "fin": "1515",
+      "dynastie": "Valois-Orléans",
+      "evenement": "Guerres d'Italie ; épouse Anne de Bretagne",
+      "tags": [
+        "Renaissance"
+      ]
+    },
+    {
+      "id": "francois-ier",
+      "nom": "François Ier",
+      "debut": "1515",
+      "fin": "1547",
+      "dynastie": "Valois-Angoulême",
+      "evenement": "Marignan (1515) ; ordonnance de Villers-Cotterêts (1539) ; mécène de Léonard de Vinci",
+      "tags": [
+        "Renaissance"
+      ]
+    },
+    {
+      "id": "henri-ii",
+      "nom": "Henri II",
+      "debut": "1547",
+      "fin": "1559",
+      "dynastie": "Valois-Angoulême",
+      "evenement": "Meurt d'une blessure reçue lors d'un tournoi",
+      "tags": [
+        "Renaissance"
+      ]
+    },
+    {
+      "id": "francois-ii",
+      "nom": "François II",
+      "debut": "1559",
+      "fin": "1560",
+      "dynastie": "Valois-Angoulême",
+      "evenement": "Époux de Marie Stuart ; conjuration d'Amboise",
+      "tags": [
+        "Renaissance"
+      ]
+    },
+    {
+      "id": "charles-ix",
+      "nom": "Charles IX",
+      "debut": "1560",
+      "fin": "1574",
+      "dynastie": "Valois-Angoulême",
+      "evenement": "Massacre de la Saint-Barthélemy (1572)",
+      "tags": [
+        "Renaissance"
+      ]
+    },
+    {
+      "id": "henri-iii",
+      "nom": "Henri III",
+      "debut": "1574",
+      "fin": "1589",
+      "dynastie": "Valois-Angoulême",
+      "evenement": "Fait assassiner le duc de Guise ; assassiné par Jacques Clément",
+      "tags": [
+        "Renaissance"
+      ]
+    },
+    {
+      "id": "henri-iv",
+      "nom": "Henri IV",
+      "surnom": "le Vert-Galant",
+      "debut": "1589",
+      "fin": "1610",
+      "dynastie": "Bourbons",
+      "evenement": "Édit de Nantes (1598) ; assassiné par Ravaillac",
+      "tags": [
+        "Renaissance"
+      ]
+    },
+    {
+      "id": "louis-xiii",
+      "nom": "Louis XIII",
+      "surnom": "le Juste",
+      "debut": "1610",
+      "fin": "1643",
+      "dynastie": "Bourbons",
+      "evenement": "Gouverne avec le cardinal de Richelieu",
+      "tags": [
+        "Époque moderne"
+      ]
+    },
+    {
+      "id": "louis-xiv",
+      "nom": "Louis XIV",
+      "surnom": "le Roi-Soleil",
+      "debut": "1643",
+      "fin": "1715",
+      "dynastie": "Bourbons",
+      "evenement": "Château de Versailles ; plus long règne de l'histoire de France",
+      "tags": [
+        "Époque moderne"
+      ]
+    },
+    {
+      "id": "louis-xv",
+      "nom": "Louis XV",
+      "surnom": "le Bien-Aimé",
+      "debut": "1715",
+      "fin": "1774",
+      "dynastie": "Bourbons",
+      "evenement": "Guerre de Sept Ans ; perte du Canada (1763)",
+      "tags": [
+        "Époque moderne"
+      ]
+    },
+    {
+      "id": "louis-xvi",
+      "nom": "Louis XVI",
+      "debut": "1774",
+      "fin": "1792",
+      "dynastie": "Bourbons",
+      "evenement": "Révolution française ; guillotiné en 1793",
+      "tags": [
+        "Époque moderne"
+      ]
+    },
+    {
+      "id": "louis-xviii",
+      "nom": "Louis XVIII",
+      "debut": "1814",
+      "fin": "1824",
+      "dynastie": "Bourbons",
+      "evenement": "Restauration ; interrompue par les Cent-Jours de Napoléon (1815)",
+      "tags": [
+        "XIXe siècle"
+      ]
+    },
+    {
+      "id": "charles-x",
+      "nom": "Charles X",
+      "debut": "1824",
+      "fin": "1830",
+      "dynastie": "Bourbons",
+      "evenement": "Renversé par les Trois Glorieuses (révolution de juillet 1830)",
+      "tags": [
+        "XIXe siècle"
+      ]
+    },
+    {
+      "id": "louis-philippe-ier",
+      "nom": [
+        "Louis-Philippe Ier",
+        "Louis-Philippe"
+      ],
+      "surnom": "le Roi-Citoyen",
+      "debut": "1830",
+      "fin": "1848",
+      "dynastie": "Orléans",
+      "evenement": "Monarchie de Juillet ; renversé par la révolution de 1848",
+      "tags": [
+        "XIXe siècle"
+      ]
+    }
+  ]
+}

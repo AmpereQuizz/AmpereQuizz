@@ -1,0 +1,117 @@
+// Routeur et pages simples : accueil, historique.
+import { $, $$, esc, formatWhen, toast } from './util.js';
+import { loadIndex } from './data.js';
+import { progress, history, favorites } from './store.js';
+import { renderSetup, renderReview, clearKeys, startSession } from './quiz.js';
+import { renderEditorHome, renderEditor } from './editor.js';
+import { loadList } from './data.js';
+
+const app = $('#app');
+
+const routes = [
+  [/^#?\/?$/, renderHome],
+  [/^#\/liste\/(.+)$/, (el, id) => renderSetup(el, decodeURIComponent(id))],
+  [/^#\/favori\/(.+)$/, renderFavorite],
+  [/^#\/revision(?:\/(.+))?$/, (el, id) => renderReview(el, id ? decodeURIComponent(id) : null)],
+  [/^#\/historique$/, renderHistory],
+  [/^#\/editeur$/, renderEditorHome],
+  [/^#\/editeur\/(.+)$/, (el, id) => renderEditor(el, decodeURIComponent(id))],
+];
+
+async function route() {
+  clearKeys();
+  const hash = location.hash || '#/';
+  $$('nav a').forEach(a => a.classList.toggle('on', hash.startsWith(a.getAttribute('href')) && a.getAttribute('href') !== '#/' || hash === a.getAttribute('href')));
+  for (const [re, fn] of routes) {
+    const m = hash.match(re);
+    if (m) {
+      try { await fn(app, ...m.slice(1)); }
+      catch (e) {
+        console.error(e);
+        app.innerHTML = `<div class="empty">Oups : ${esc(e.message)}<br><a href="#/">Retour à l’accueil</a></div>`;
+      }
+      updateBadge();
+      return;
+    }
+  }
+  location.hash = '#/';
+}
+
+function updateBadge() {
+  const n = progress.due().length;
+  const b = $('#due-badge');
+  b.textContent = n;
+  b.hidden = !n;
+}
+
+async function renderHome(el) {
+  const lists = await loadIndex();
+  const favs = favorites.all();
+  const due = progress.due();
+  el.innerHTML = `
+    <section>
+      ${due.length ? `<a class="banner" href="#/revision">🔁 ${due.length} question${due.length > 1 ? 's' : ''} à revoir aujourd’hui</a>` : ''}
+      ${favs.length ? `<h2>Mes combinaisons</h2>
+        <div class="fav-list">${favs.map(f => `
+          <div class="fav"><a href="#/favori/${f.id}" class="fav-go">▶ ${esc(f.name)}</a>
+          <button class="icon-btn" data-del="${f.id}" title="Supprimer">✕</button></div>`).join('')}</div>` : ''}
+      <h2>Listes</h2>
+      ${lists.length ? `<div class="list-grid">${lists.map(l => `
+        <a class="list-card" href="#/liste/${encodeURIComponent(l.id)}">
+          ${l.cover ? `<img src="lists/${esc(l.cover)}" alt="" loading="lazy">` : ''}
+          <h3>${esc(l.title)} ${l.draft ? '<span class="badge-draft">brouillon</span>' : ''}</h3>
+          ${l.description ? `<p class="muted">${esc(l.description)}</p>` : ''}
+          <p class="small muted">${l.count} fiches${l.columns ? ' · ' + l.columns.map(esc).join(', ') : ''}</p>
+        </a>`).join('')}</div>`
+      : '<div class="empty">Aucune liste trouvée. Créez-en une dans l’<a href="#/editeur">éditeur</a>.</div>'}
+    </section>`;
+  $$('[data-del]', el).forEach(b => b.onclick = () => { favorites.remove(b.dataset.del); renderHome(el); });
+}
+
+async function renderFavorite(el, id) {
+  const f = favorites.get(id);
+  if (!f) { location.hash = '#/'; return; }
+  const list = await loadList(f.listId);
+  startSession(el, list, f.cfg);
+}
+
+function renderHistory(el) {
+  const all = history.all();
+  const byList = {};
+  for (const h of all) {
+    const s = (byList[h.listTitle] ||= { n: 0, score: 0, total: 0, best: 0 });
+    s.n++; s.score += h.score; s.total += h.total;
+    s.best = Math.max(s.best, h.total ? h.score / h.total : 0);
+  }
+  const modes = { qcm: 'Choix multiple', libre: 'Saisie libre', chrono: 'Ordre' };
+  el.innerHTML = `<section>
+    <div class="page-head"><h1>Historique</h1></div>
+    ${all.length ? `
+      <div class="stats">${Object.entries(byList).map(([t, s]) => `
+        <div class="stat"><span class="lbl">${esc(t)}</span><b>${Math.round(s.score / s.total * 100)} %</b>
+        <span class="small muted">${s.n} séance${s.n > 1 ? 's' : ''} · meilleur ${Math.round(s.best * 100)} %</span></div>`).join('')}</div>
+      <div class="spark">${all.slice(0, 40).reverse().map(h => `<span title="${esc(h.listTitle)} : ${h.score}/${h.total}" style="height:${h.total ? Math.max(4, h.score / h.total * 100) : 4}%"></span>`).join('')}</div>
+      <div class="table-wrap"><table class="hist">
+        <thead><tr><th>Date</th><th>Liste</th><th>Exercice</th><th>Score</th></tr></thead>
+        <tbody>${all.map(h => `<tr>
+          <td>${formatWhen(h.at)}</td><td>${esc(h.listTitle)}${h.review ? ' <span class="tag">révision</span>' : ''}</td>
+          <td class="small">${esc(modes[h.mode] || h.mode)}${h.find?.length ? ' · ' + esc((h.show || []).join(' + ') || '…') + ' → ' + esc(h.find.join(' + ')) : ''}</td>
+          <td><b>${h.score}/${h.total}</b> <span class="muted small">${h.total ? Math.round(h.score / h.total * 100) : 0} %</span></td></tr>`).join('')}</tbody>
+      </table></div>
+      <div class="actions"><button class="btn ghost" id="clear">Effacer l’historique</button></div>`
+    : '<div class="empty">Pas encore de séance. Lancez un entraînement depuis l’accueil.</div>'}
+  </section>`;
+  const c = $('#clear', el);
+  if (c) c.onclick = () => {
+    if (c.dataset.confirm) { history.clear(); toast('Historique effacé'); renderHistory(el); }
+    else { c.dataset.confirm = '1'; c.textContent = 'Cliquer encore pour confirmer'; }
+  };
+}
+
+window.addEventListener('hashchange', route);
+// Un lien vers la page courante (ex. « Changer les réglages » pendant un quiz) recharge la vue.
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href^="#"]');
+  if (a && a.getAttribute('href') === (location.hash || '#/')) { e.preventDefault(); route(); }
+});
+route();

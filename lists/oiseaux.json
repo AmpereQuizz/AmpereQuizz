@@ -1,0 +1,566 @@
+{
+  "title": "Oiseaux d'Europe",
+  "description": "Liste de test : 24 oiseaux communs. Photos issues de Wikimedia Commons, sous licences libres (auteur et licence indiqués sous chaque photo).",
+  "source": "Photos : Wikimedia Commons",
+  "columns": [
+    {
+      "key": "nom",
+      "label": "Nom",
+      "type": "text"
+    },
+    {
+      "key": "photo",
+      "label": "Photo",
+      "type": "image"
+    },
+    {
+      "key": "latin",
+      "label": "Nom scientifique",
+      "type": "text"
+    },
+    {
+      "key": "famille",
+      "label": "Famille",
+      "type": "text"
+    },
+    {
+      "key": "ordre",
+      "label": "Ordre",
+      "type": "text"
+    },
+    {
+      "key": "envergure",
+      "label": "Envergure",
+      "type": "number",
+      "unit": "cm",
+      "tolerance": "15%"
+    },
+    {
+      "key": "habitat",
+      "label": "Habitat",
+      "type": "text",
+      "filter": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "merle-noir",
+      "nom": [
+        "Merle noir",
+        "Merle"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Merle noir",
+          "en:Turdus merula"
+        ]
+      },
+      "latin": "Turdus merula",
+      "famille": "Turdidés",
+      "ordre": "Passériformes",
+      "envergure": 36,
+      "habitat": "Jardins, parcs, bois",
+      "tags": [
+        "jardin",
+        "commun"
+      ]
+    },
+    {
+      "id": "rougegorge-familier",
+      "nom": [
+        "Rougegorge familier",
+        "Rouge-gorge familier",
+        "Rouge-gorge",
+        "Rougegorge"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Rougegorge familier",
+          "en:Erithacus rubecula"
+        ]
+      },
+      "latin": "Erithacus rubecula",
+      "famille": "Muscicapidés",
+      "ordre": "Passériformes",
+      "envergure": 21,
+      "habitat": "Jardins, haies, bois",
+      "tags": [
+        "jardin",
+        "commun"
+      ]
+    },
+    {
+      "id": "mesange-charbonniere",
+      "nom": "Mésange charbonnière",
+      "photo": {
+        "wikipedia": [
+          "Mésange charbonnière",
+          "en:Parus major"
+        ]
+      },
+      "latin": "Parus major",
+      "famille": "Paridés",
+      "ordre": "Passériformes",
+      "envergure": 24,
+      "habitat": "Jardins, forêts",
+      "tags": [
+        "jardin",
+        "commun"
+      ]
+    },
+    {
+      "id": "mesange-bleue",
+      "nom": "Mésange bleue",
+      "photo": {
+        "wikipedia": [
+          "Mésange bleue",
+          "en:Cyanistes caeruleus"
+        ]
+      },
+      "latin": "Cyanistes caeruleus",
+      "famille": "Paridés",
+      "ordre": "Passériformes",
+      "envergure": 19,
+      "habitat": "Jardins, forêts de feuillus",
+      "tags": [
+        "jardin",
+        "commun"
+      ]
+    },
+    {
+      "id": "moineau-domestique",
+      "nom": [
+        "Moineau domestique",
+        "Moineau"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Moineau domestique",
+          "en:Passer domesticus"
+        ]
+      },
+      "latin": "Passer domesticus",
+      "famille": "Passéridés",
+      "ordre": "Passériformes",
+      "envergure": 23,
+      "habitat": "Villes, villages, fermes",
+      "tags": [
+        "jardin",
+        "ville",
+        "commun"
+      ]
+    },
+    {
+      "id": "pie-bavarde",
+      "nom": [
+        "Pie bavarde",
+        "Pie"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Pie bavarde",
+          "en:Pica pica"
+        ]
+      },
+      "latin": "Pica pica",
+      "famille": "Corvidés",
+      "ordre": "Passériformes",
+      "envergure": 55,
+      "habitat": "Campagnes, parcs, villes",
+      "tags": [
+        "jardin",
+        "ville",
+        "commun"
+      ]
+    },
+    {
+      "id": "corneille-noire",
+      "nom": [
+        "Corneille noire",
+        "Corneille"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Corneille noire",
+          "en:Corvus corone"
+        ]
+      },
+      "latin": "Corvus corone",
+      "famille": "Corvidés",
+      "ordre": "Passériformes",
+      "envergure": 95,
+      "habitat": "Champs, parcs, villes",
+      "tags": [
+        "ville",
+        "campagne"
+      ]
+    },
+    {
+      "id": "pigeon-ramier",
+      "nom": [
+        "Pigeon ramier",
+        "Palombe"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Pigeon ramier",
+          "en:Columba palumbus"
+        ]
+      },
+      "latin": "Columba palumbus",
+      "famille": "Columbidés",
+      "ordre": "Columbiformes",
+      "envergure": 75,
+      "habitat": "Bois, parcs, champs",
+      "tags": [
+        "ville",
+        "campagne",
+        "commun"
+      ]
+    },
+    {
+      "id": "etourneau-sansonnet",
+      "nom": [
+        "Étourneau sansonnet",
+        "Étourneau"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Étourneau sansonnet",
+          "en:Sturnus vulgaris"
+        ]
+      },
+      "latin": "Sturnus vulgaris",
+      "famille": "Sturnidés",
+      "ordre": "Passériformes",
+      "envergure": 39,
+      "habitat": "Prairies, villes",
+      "tags": [
+        "ville",
+        "campagne"
+      ]
+    },
+    {
+      "id": "pinson-des-arbres",
+      "nom": [
+        "Pinson des arbres",
+        "Pinson"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Pinson des arbres",
+          "en:Fringilla coelebs"
+        ]
+      },
+      "latin": "Fringilla coelebs",
+      "famille": "Fringillidés",
+      "ordre": "Passériformes",
+      "envergure": 26,
+      "habitat": "Forêts, parcs, jardins",
+      "tags": [
+        "jardin",
+        "forêt"
+      ]
+    },
+    {
+      "id": "chardonneret-elegant",
+      "nom": [
+        "Chardonneret élégant",
+        "Chardonneret"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Chardonneret élégant",
+          "en:Carduelis carduelis"
+        ]
+      },
+      "latin": "Carduelis carduelis",
+      "famille": "Fringillidés",
+      "ordre": "Passériformes",
+      "envergure": 23,
+      "habitat": "Friches, vergers, jardins",
+      "tags": [
+        "jardin",
+        "campagne"
+      ]
+    },
+    {
+      "id": "martin-pecheur-d-europe",
+      "nom": [
+        "Martin-pêcheur d'Europe",
+        "Martin-pêcheur"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Martin-pêcheur d'Europe",
+          "en:Alcedo atthis"
+        ]
+      },
+      "latin": "Alcedo atthis",
+      "famille": "Alcédinidés",
+      "ordre": "Coraciiformes",
+      "envergure": 26,
+      "habitat": "Rivières, étangs",
+      "tags": [
+        "zone humide"
+      ]
+    },
+    {
+      "id": "heron-cendre",
+      "nom": "Héron cendré",
+      "photo": {
+        "wikipedia": [
+          "Héron cendré",
+          "en:Ardea cinerea"
+        ]
+      },
+      "latin": "Ardea cinerea",
+      "famille": "Ardéidés",
+      "ordre": "Pélécaniformes",
+      "envergure": 175,
+      "habitat": "Étangs, rivières, prairies humides",
+      "tags": [
+        "zone humide",
+        "grand"
+      ]
+    },
+    {
+      "id": "cigogne-blanche",
+      "nom": [
+        "Cigogne blanche",
+        "Cigogne"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Cigogne blanche",
+          "en:Ciconia ciconia"
+        ]
+      },
+      "latin": "Ciconia ciconia",
+      "famille": "Ciconiidés",
+      "ordre": "Ciconiiformes",
+      "envergure": 205,
+      "habitat": "Prairies humides, villages",
+      "tags": [
+        "zone humide",
+        "migrateur",
+        "grand"
+      ]
+    },
+    {
+      "id": "buse-variable",
+      "nom": [
+        "Buse variable",
+        "Buse"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Buse variable",
+          "en:Buteo buteo"
+        ]
+      },
+      "latin": "Buteo buteo",
+      "famille": "Accipitridés",
+      "ordre": "Accipitriformes",
+      "envergure": 120,
+      "habitat": "Bocage, lisières de forêt",
+      "tags": [
+        "rapace",
+        "campagne"
+      ]
+    },
+    {
+      "id": "faucon-crecerelle",
+      "nom": [
+        "Faucon crécerelle",
+        "Crécerelle"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Faucon crécerelle",
+          "en:Falco tinnunculus"
+        ]
+      },
+      "latin": "Falco tinnunculus",
+      "famille": "Falconidés",
+      "ordre": "Falconiformes",
+      "envergure": 75,
+      "habitat": "Champs, bords de route, villes",
+      "tags": [
+        "rapace",
+        "campagne"
+      ]
+    },
+    {
+      "id": "chouette-hulotte",
+      "nom": [
+        "Chouette hulotte",
+        "Hulotte"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Chouette hulotte",
+          "en:Strix aluco"
+        ]
+      },
+      "latin": "Strix aluco",
+      "famille": "Strigidés",
+      "ordre": "Strigiformes",
+      "envergure": 95,
+      "habitat": "Forêts, grands parcs",
+      "tags": [
+        "rapace",
+        "nocturne",
+        "forêt"
+      ]
+    },
+    {
+      "id": "pic-vert",
+      "nom": "Pic vert",
+      "photo": {
+        "wikipedia": [
+          "Pic vert",
+          "en:Picus viridis"
+        ]
+      },
+      "latin": "Picus viridis",
+      "famille": "Picidés",
+      "ordre": "Piciformes",
+      "envergure": 42,
+      "habitat": "Vergers, parcs, lisières",
+      "tags": [
+        "forêt",
+        "jardin"
+      ]
+    },
+    {
+      "id": "geai-des-chenes",
+      "nom": [
+        "Geai des chênes",
+        "Geai"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Geai des chênes",
+          "en:Garrulus glandarius"
+        ]
+      },
+      "latin": "Garrulus glandarius",
+      "famille": "Corvidés",
+      "ordre": "Passériformes",
+      "envergure": 54,
+      "habitat": "Forêts de chênes, parcs",
+      "tags": [
+        "forêt"
+      ]
+    },
+    {
+      "id": "hirondelle-rustique",
+      "nom": [
+        "Hirondelle rustique",
+        "Hirondelle de cheminée"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Hirondelle rustique",
+          "en:Hirundo rustica"
+        ]
+      },
+      "latin": "Hirundo rustica",
+      "famille": "Hirundinidés",
+      "ordre": "Passériformes",
+      "envergure": 33,
+      "habitat": "Fermes, campagnes",
+      "tags": [
+        "migrateur",
+        "campagne"
+      ]
+    },
+    {
+      "id": "canard-colvert",
+      "nom": [
+        "Canard colvert",
+        "Colvert"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Canard colvert",
+          "en:Anas platyrhynchos"
+        ]
+      },
+      "latin": "Anas platyrhynchos",
+      "famille": "Anatidés",
+      "ordre": "Ansériformes",
+      "envergure": 90,
+      "habitat": "Étangs, rivières, parcs",
+      "tags": [
+        "zone humide",
+        "commun"
+      ]
+    },
+    {
+      "id": "mouette-rieuse",
+      "nom": "Mouette rieuse",
+      "photo": {
+        "wikipedia": [
+          "Mouette rieuse",
+          "en:Chroicocephalus ridibundus"
+        ]
+      },
+      "latin": "Chroicocephalus ridibundus",
+      "famille": "Laridés",
+      "ordre": "Charadriiformes",
+      "envergure": 100,
+      "habitat": "Côtes, lacs, villes",
+      "tags": [
+        "zone humide",
+        "mer"
+      ]
+    },
+    {
+      "id": "rougequeue-noir",
+      "nom": [
+        "Rougequeue noir",
+        "Rouge-queue noir"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Rougequeue noir",
+          "en:Phoenicurus ochruros"
+        ]
+      },
+      "latin": "Phoenicurus ochruros",
+      "famille": "Muscicapidés",
+      "ordre": "Passériformes",
+      "envergure": 25,
+      "habitat": "Villages, rochers, toits",
+      "tags": [
+        "jardin",
+        "ville"
+      ]
+    },
+    {
+      "id": "grand-cormoran",
+      "nom": [
+        "Grand Cormoran",
+        "Cormoran"
+      ],
+      "photo": {
+        "wikipedia": [
+          "Grand Cormoran",
+          "en:Phalacrocorax carbo"
+        ]
+      },
+      "latin": "Phalacrocorax carbo",
+      "famille": "Phalacrocoracidés",
+      "ordre": "Suliformes",
+      "envergure": 145,
+      "habitat": "Côtes, lacs, rivières",
+      "tags": [
+        "zone humide",
+        "mer",
+        "grand"
+      ]
+    }
+  ]
+}
