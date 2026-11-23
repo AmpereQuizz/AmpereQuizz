@@ -1,5 +1,5 @@
 // Routeur et pages simples : accueil, historique.
-import { $, $$, esc, formatWhen, toast } from './util.js';
+import { $, $$, esc, formatWhen, toast, safeUrl } from './util.js';
 import { loadIndex } from './data.js';
 import { progress, history, favorites } from './store.js';
 import { renderSetup, renderReview, clearKeys, startSession } from './quiz.js';
@@ -66,7 +66,7 @@ async function renderHome(el) {
       <h2>Listes</h2>
       ${lists.length ? `<div class="list-grid">${lists.map(l => `
         <a class="list-card" href="#/liste/${encodeURIComponent(l.id)}">
-          ${l.cover ? `<img src="${/^https?:/.test(l.cover) ? '' : 'lists/'}${esc(l.cover)}" alt="" loading="lazy">` : ''}
+          ${safeUrl(l.cover) ? `<img src="${/^https?:/.test(l.cover) ? '' : 'lists/'}${esc(safeUrl(l.cover))}" alt="" loading="lazy">` : ''}
           <h3>${esc(l.title)} ${l.draft ? '<span class="badge-draft">brouillon</span>' : ''}${l.mine ? '<span class="badge-draft">perso</span>' : ''}</h3>
           ${l.description ? `<p class="muted">${esc(l.description)}</p>` : ''}
           <p class="small muted">${l.count} fiches${l.columns ? ' · ' + l.columns.map(esc).join(', ') : ''}</p>

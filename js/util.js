@@ -163,3 +163,14 @@ export function toast(msg, kind = '') {
   setTimeout(() => el.classList.add('out'), 2600);
   setTimeout(() => el.remove(), 3100);
 }
+
+// N'autorise que des adresses sans danger pour les images, sons et liens venant des listes
+// (https, http, data:image / data:audio, blob, ou chemin relatif). Sinon : chaîne vide.
+export function safeUrl(u) {
+  const s = String(u ?? '').trim();
+  if (!s) return '';
+  if (/^(https?:|blob:)/i.test(s)) return s;
+  if (/^data:(image|audio)\/[\w.+-]+[;,]/i.test(s)) return s;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(s) || s.startsWith('//')) return '';
+  return s;
+}

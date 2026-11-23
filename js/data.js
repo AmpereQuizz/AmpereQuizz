@@ -1,5 +1,5 @@
 // Chargement des listes (dépôt + brouillons locaux) et lecture des cellules.
-import { esc, slugify, formatDate, formatNumber, parseDate } from './util.js';
+import { esc, slugify, formatDate, formatNumber, parseDate, safeUrl } from './util.js';
 import { drafts } from './store.js';
 import { currentUser, myLists, getMyList, getChallenge, publicLists } from './cloud.js';
 
@@ -161,6 +161,8 @@ export function sortKey(col, v) {
 export function mediaInfo(list, v) {
   if (isEmpty(v)) return null;
   const o = typeof v === 'string' ? { src: v } : { ...v };
+  o.src = safeUrl(o.src);
+  o.source = safeUrl(o.source);
   if (o.src && !/^(https?:|data:|blob:)/.test(o.src)) o.src = (list._base || '') + o.src;
   return o;
 }
