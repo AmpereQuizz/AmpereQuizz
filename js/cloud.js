@@ -125,6 +125,32 @@ export async function hidePublicList(id, title) {
   check(await sb.from('public_lists').upsert({ id, title: title || id, data: null, hidden: true, updated_at: new Date().toISOString() }).select('id'));
 }
 
+// ---------- Catégories ----------
+
+export async function categoriesData() {
+  if (!sb) return { cats: [], links: [] };
+  const [c, l] = await Promise.all([
+    sb.from('categories').select('id, name, parent, position'),
+    sb.from('list_categories').select('list_id, category_id'),
+  ]);
+  if (c.error || l.error) throw new Error((c.error || l.error).message);
+  return { cats: c.data, links: l.data };
+}
+
+export async function saveCategory({ id, ...fields }) {
+  if (id) check(await sb.from('categories').update(fields).eq('id', id).select('id'));
+  else check(await sb.from('categories').insert(fields).select('id'));
+}
+
+export async function deleteCategory(id) {
+  check(await sb.from('categories').delete().eq('id', id));
+}
+
+export async function setListCategory(listId, categoryId) {
+  if (!categoryId) check(await sb.from('list_categories').delete().eq('list_id', listId));
+  else check(await sb.from('list_categories').upsert({ list_id: listId, category_id: categoryId }).select('list_id'));
+}
+
 // ---------- Administration ----------
 
 export async function allUsers() {

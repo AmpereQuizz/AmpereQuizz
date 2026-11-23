@@ -308,3 +308,16 @@ table.rank td:first-child { width: 2.5rem; text-align: center; }
 table.users td { white-space: nowrap; }
 table.users tr.me td { background: var(--hl); }
 @media (max-width: 560px) { table.users th:nth-child(2), table.users td:nth-child(2) { display: none; } }
+
+.crumbs { margin-bottom: 1rem; font-size: .95rem; }
+.crumbs a { text-decoration: none; }
+.list-card.folder { background: var(--surface-2); }
+.list-grid + .list-grid, .list-grid + .sub-h { margin-top: 1rem; }
+.sub-h { font-size: .95rem; color: var(--muted); margin: 1rem 0 .5rem; }
+.cat-tree { list-style: none; padding-left: 0; margin: 0 0 .8rem; }
+.cat-tree .cat-tree { padding-left: 1.4rem; border-left: 2px solid var(--border); margin: .3rem 0 .3rem .6rem; }
+.cat-row { display: flex; gap: .4rem; align-items: center; margin-bottom: .35rem; flex-wrap: wrap; }
+.cat-row .cat-name { flex: 1; min-width: 8rem; }
+.cat-row select, .cat-new select { max-width: 14rem; }
+.cat-new { flex-wrap: wrap; }
+.cat-new input { flex: 1 1 100%; }

@@ -7,11 +7,13 @@ import { renderEditorHome, renderEditor, renderConnectLink } from './editor.js';
 import { loadList } from './data.js';
 import { cloudEnabled, initCloud, currentUser, onUserChange } from './cloud.js';
 import { renderAccount, renderLeaderboard, renderChallenge, renderAdmin } from './social.js';
+import { loadCategories, childrenOf, pathOf, descendants, categoryOfList } from './categories.js';
 
 const app = $('#app');
 
 const routes = [
-  [/^#?\/?$/, renderHome],
+  [/^#?\/?$/, el => renderHome(el)],
+  [/^#\/c\/([\w-]+)$/, (el, id) => renderHome(el, id)],
   [/^#\/liste\/(.+)$/, (el, id) => renderSetup(el, decodeURIComponent(id))],
   [/^#\/favori\/(.+)$/, renderFavorite],
   [/^#\/revision(?:\/(.+))?$/, (el, id) => renderReview(el, id ? decodeURIComponent(id) : null)],
@@ -51,8 +53,40 @@ function updateBadge() {
   b.hidden = !n;
 }
 
-async function renderHome(el) {
-  const lists = await loadIndex();
+const card = l => `
+        <a class="list-card" href="#/liste/${encodeURIComponent(l.id)}">
+          ${safeUrl(l.cover) ? `<img src="${/^https?:/.test(l.cover) ? '' : 'lists/'}${esc(safeUrl(l.cover))}" alt="" loading="lazy">` : ''}
+          <h3>${esc(l.title)} ${l.draft ? '<span class="badge-draft">brouillon</span>' : ''}${l.mine ? '<span class="badge-draft">perso</span>' : ''}</h3>
+          ${l.description ? `<p class="muted">${esc(l.description)}</p>` : ''}
+          <p class="small muted">${l.count} fiches${l.columns ? ' · ' + l.columns.map(esc).join(', ') : ''}</p>
+        </a>`;
+
+async function renderHome(el, catId = null) {
+  const all = await loadIndex();
+  let t = { cats: [], byId: new Map(), listCat: new Map() };
+  try { t = await loadCategories(); } catch (e) { /* catégories pas encore installées */ }
+  if (catId && !t.byId.has(catId)) catId = null;
+  const isPublic = l => !l.draft && !l.mine;
+  const inTree = id => {
+    const set = descendants(t, id);
+    return all.filter(l => isPublic(l) && set.has(categoryOfList(t, l.id))).length;
+  };
+  const subcats = childrenOf(t, catId);
+  const here = all.filter(l => isPublic(l) && categoryOfList(t, l.id) === catId);
+  const personal = catId ? [] : all.filter(l => !isPublic(l));
+  const folders = subcats.length ? `<div class="list-grid">${subcats.map(c => `
+      <a class="list-card folder" href="#/c/${c.id}"><h3>📁 ${esc(c.name)}</h3>
+        <p class="small muted">${inTree(c.id)} liste${inTree(c.id) > 1 ? 's' : ''}${childrenOf(t, c.id).length ? ` · ${childrenOf(t, c.id).length} sous-catégorie${childrenOf(t, c.id).length > 1 ? 's' : ''}` : ''}</p></a>`).join('')}</div>` : '';
+  if (catId) {
+    el.innerHTML = `<section>
+      <nav class="crumbs"><a href="#/">Accueil</a>${pathOf(t, catId).map((c, i, a) => i === a.length - 1 ? ` › <b>${esc(c.name)}</b>` : ` › <a href="#/c/${c.id}">${esc(c.name)}</a>`).join('')}</nav>
+      ${folders}
+      ${here.length ? `<div class="list-grid">${here.map(card).join('')}</div>` : ''}
+      ${!subcats.length && !here.length ? '<div class="empty">Cette catégorie est vide.</div>' : ''}
+    </section>`;
+    return;
+  }
+  const lists = here;
   const favs = favorites.all();
   const due = progress.due();
   el.innerHTML = `
@@ -64,14 +98,10 @@ async function renderHome(el) {
           <div class="fav"><a href="#/favori/${f.id}" class="fav-go">▶ ${esc(f.name)}</a>
           <button class="icon-btn" data-del="${f.id}" title="Supprimer">✕</button></div>`).join('')}</div>` : ''}
       <h2>Listes</h2>
-      ${lists.length ? `<div class="list-grid">${lists.map(l => `
-        <a class="list-card" href="#/liste/${encodeURIComponent(l.id)}">
-          ${safeUrl(l.cover) ? `<img src="${/^https?:/.test(l.cover) ? '' : 'lists/'}${esc(safeUrl(l.cover))}" alt="" loading="lazy">` : ''}
-          <h3>${esc(l.title)} ${l.draft ? '<span class="badge-draft">brouillon</span>' : ''}${l.mine ? '<span class="badge-draft">perso</span>' : ''}</h3>
-          ${l.description ? `<p class="muted">${esc(l.description)}</p>` : ''}
-          <p class="small muted">${l.count} fiches${l.columns ? ' · ' + l.columns.map(esc).join(', ') : ''}</p>
-        </a>`).join('')}</div>`
-      : '<div class="empty">Aucune liste trouvée. Créez-en une dans l’<a href="#/editeur">éditeur</a>.</div>'}
+      ${folders}
+      ${lists.length ? `${subcats.length ? '<h3 class="sub-h">Autres listes</h3>' : ''}<div class="list-grid">${lists.map(card).join('')}</div>` : ''}
+      ${!subcats.length && !lists.length && !personal.length ? '<div class="empty">Aucune liste trouvée. Créez-en une dans l’<a href="#/editeur">éditeur</a>.</div>' : ''}
+      ${personal.length ? `<h2>Mes listes</h2><div class="list-grid">${personal.map(card).join('')}</div>` : ''}
     </section>`;
   $$('[data-del]', el).forEach(b => b.onclick = () => { favorites.remove(b.dataset.del); renderHome(el); });
 }
