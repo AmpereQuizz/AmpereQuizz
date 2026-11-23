@@ -1,9 +1,9 @@
 // Éditeur de listes : brouillons locaux, export (.zip / .json), publication GitHub.
 import { $, $$, esc, slugify, toast } from './util.js';
-import { loadIndex, TYPES, textOf, mediaInfo, isEmpty } from './data.js';
+import { loadIndex, TYPES, textOf, mediaInfo, isEmpty, publicData, invalidateLists } from './data.js';
 import { drafts } from './store.js';
 import { connection, connect, disconnect, commitFiles, readFile, guessRepo } from './github.js';
-import { cloudEnabled, currentUser, saveMyList, getMyList, deleteMyList } from './cloud.js';
+import { cloudEnabled, currentUser, saveMyList, getMyList, deleteMyList, savePublicList, hidePublicList } from './cloud.js';
 import { askLogin } from './social.js';
 
 const newDraftId = () => 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -29,7 +29,7 @@ export async function renderEditorHome(el) {
     </div>
     ${mine.length ? `<div class="panel"><h2>Mes listes perso</h2>
       <div class="chips">${mine.map(l => `<button class="chip" data-mine="${esc(l.id.slice(6))}">✎ ${esc(l.title)}</button>`).join('')}</div></div>` : ''}
-    ${conn && index.length ? `<div class="panel"><h2>Listes du site (pour tout le monde)</h2>
+    ${(conn || me?.isAdmin) && index.length ? `<div class="panel"><h2>Listes du site (pour tout le monde)</h2>
       <p class="hint">Choisissez une liste pour la modifier.</p>
       <div class="chips">${index.map(l => `<button class="chip" data-copy="${esc(l.id)}">✎ ${esc(l.title)}</button>`).join('')}</div></div>` : ''}
     <h2>En cours sur cet appareil</h2>
@@ -38,7 +38,7 @@ export async function renderEditorHome(el) {
         <h3>${esc(d.title || 'Sans titre')}</h3>
         <p class="small muted">${(d.rows || []).length} fiches · ${!d._dirty && d._publishedAt ? '✓ publiée sur le site' : !d._dirty && d._cloudId ? '✓ dans mes listes' : 'pas encore enregistrée'}</p>
       </a>`).join('')}</div>` : '<div class="empty">Rien en cours.</div>'}
-    ${conn ? '' : `<details class="panel admin"><summary>Publier des listes pour tout le monde (administrateur du site)</summary>${connectPanel(null)}</details>`}
+    ${conn || me?.isAdmin ? '' : `<details class="panel admin"><summary>Publier des listes pour tout le monde (administrateur du site)</summary>${connectPanel(null)}</details>`}
   </section>`;
   $$('[data-mine]', el).forEach(b => b.onclick = async () => {
     const cid = b.dataset.mine;
@@ -80,8 +80,9 @@ export async function renderEditorHome(el) {
     const existing = Object.values(drafts.all()).find(x => x._origin === id);
     if (existing?._dirty) { location.hash = '#/editeur/' + existing._draftId; return; }
     if (existing) drafts.remove(existing._draftId);
-    const fresh = await readFile(`lists/${id}.json`);
-    const data = fresh ? JSON.parse(fresh) : await (await fetch(`lists/${encodeURIComponent(id)}.json`, { cache: 'no-cache' })).json();
+    const online = await publicData(id);
+    const fresh = online ? null : await readFile(`lists/${id}.json`);
+    const data = online || (fresh ? JSON.parse(fresh) : await (await fetch(`lists/${encodeURIComponent(id)}.json`, { cache: 'no-cache' })).json());
     data.id = id;
     data._origin = id;
     data._draftId = newDraftId();
@@ -211,7 +212,7 @@ export function renderEditor(el, draftId) {
         <h2>Enregistrer</h2>
         <div class="actions">
           ${currentUser() && !d._origin ? `<button class="btn primary big" id="save-mine">💾 Enregistrer dans mes listes</button>` : ''}
-          ${connection() ? `<button class="btn ${currentUser() && !d._origin ? '' : 'primary big'}" id="publish">🌍 Publier sur le site pour tout le monde</button>` : ''}
+          ${currentUser()?.isAdmin || connection() ? `<button class="btn ${currentUser() && !d._origin ? '' : 'primary big'}" id="publish">🌍 Publier sur le site pour tout le monde</button>` : ''}
           ${!currentUser() && !connection() && cloudEnabled ? `<button class="btn primary" id="login-save">Se connecter pour enregistrer</button>` : ''}
           <a class="btn" href="#/liste/brouillon:${d._draftId}">▶ Essayer</a>
         </div>
@@ -221,7 +222,7 @@ export function renderEditor(el, draftId) {
             <button class="btn" id="dl-zip">Télécharger (.zip avec images)</button>
             <button class="btn" id="dl-json">Télécharger le .json seul</button>
             <button class="btn ghost" id="del">Abandonner ce brouillon</button>
-            ${d._origin && connection() ? `<button class="btn ghost danger" id="unpublish">Supprimer la liste du site</button>` : ''}
+            ${d._origin && (connection() || currentUser()?.isAdmin) ? `<button class="btn ghost danger" id="unpublish">Supprimer la liste du site</button>` : ''}
             ${d._cloudId && currentUser() ? `<button class="btn ghost danger" id="del-mine">Supprimer de mes listes</button>` : ''}
           </div>
         </details>
@@ -273,7 +274,7 @@ export function renderEditor(el, draftId) {
       if (i.dataset.meta === 'id') { i.dataset.touched = '1'; d.id = slugify(i.value) || i.value; }
       save();
     });
-    if (d.id && d.id !== slugify(d.title)) $('[data-meta="id"]', el).dataset.touched = '1';
+    if (d._origin || d._cloudId || (d.id && d.id !== slugify(d.title))) $('[data-meta="id"]', el).dataset.touched = '1';
 
     $$('.ed-cols [data-col]', el).forEach(i => {
       const ci = +i.closest('tr').dataset.ci;
@@ -443,6 +444,27 @@ export function renderEditor(el, draftId) {
         }
       }
       pub.disabled = true;
+      if (currentUser()?.isAdmin) {
+        try {
+          msg.textContent = 'Préparation des images…';
+          const { json } = await exportList(d, false);
+          const data = JSON.parse(json);
+          await resolveWikipediaImages(data, t => { msg.textContent = t; });
+          msg.textContent = 'Publication…';
+          await savePublicList(id, data);
+          if (d._origin && d._origin !== id) await hidePublicList(d._origin, d.title);
+          Object.assign(d, { columns: data.columns, rows: data.rows, id, _origin: id, _publishedAt: Date.now(), _dirty: false });
+          drafts.save(d);
+          invalidateLists();
+          render();
+          $('#pub-msg', el).textContent = '✓ Publiée : tout le monde la voit dès maintenant.';
+          toast('Liste publiée pour tout le monde');
+        } catch (e) {
+          msg.textContent = 'Échec de la publication : ' + e.message;
+          pub.disabled = false;
+        }
+        return;
+      }
       try {
         const { json, files } = await exportList(d, true);
         const all = [...files.map(f => ({ path: 'lists/' + f.name, data: f.data })), { path: `lists/${id}.json`, data: new TextEncoder().encode(json) }];
@@ -465,6 +487,16 @@ export function renderEditor(el, draftId) {
     if (un) un.onclick = async () => {
       if (!un.dataset.confirm) { un.dataset.confirm = 1; un.textContent = 'Cliquer encore pour supprimer du site'; return; }
       un.disabled = true;
+      if (currentUser()?.isAdmin) {
+        try {
+          await hidePublicList(d._origin, d.title);
+          drafts.remove(d._draftId);
+          invalidateLists();
+          toast('Liste retirée du site');
+          location.hash = '#/editeur';
+        } catch (e) { msg.textContent = 'Échec : ' + e.message; un.disabled = false; }
+        return;
+      }
       try {
         await commitFiles([{ path: `lists/${d._origin}.json`, data: null }], `Suppression de la liste « ${d.title} »`, step => { msg.textContent = step; });
         drafts.remove(d._draftId);

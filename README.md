@@ -85,3 +85,13 @@ Il faut une seule fois activer Pages : **Settings → Pages → Source : GitHub 
 ## Crédits
 
 Les photos d'oiseaux proviennent de Wikimedia Commons, sous licences libres ; l'auteur, la licence et un lien vers la source sont affichés sous chaque photo.
+
+## Administration
+
+Après `supabase/schema.sql`, coller `supabase/admin.sql` dans Supabase, puis donner le rôle d’dministrateur :
+
+```sql
+update public.profiles set is_admin = true where lower(username) = lower('pseudo');
+```
+
+Un administrateur connecté publie, modifie et retire les listes pour tout le monde depuis l’\éditeur (stockées dans la table `public_lists`, prioritaires sur les fichiers du dépôt de même identifiant).

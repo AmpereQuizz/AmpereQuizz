@@ -1,7 +1,7 @@
 // Chargement des listes (dépôt + brouillons locaux) et lecture des cellules.
 import { esc, slugify, formatDate, formatNumber, parseDate } from './util.js';
 import { drafts } from './store.js';
-import { currentUser, myLists, getMyList, getChallenge } from './cloud.js';
+import { currentUser, myLists, getMyList, getChallenge, publicLists } from './cloud.js';
 
 export const TYPES = {
   text: 'Texte',
@@ -13,6 +13,27 @@ export const TYPES = {
 
 let indexCache = null;
 const listCache = new Map();
+// Listes publiques enregistrées en ligne par un administrateur (elles remplacent celles du dépôt de même identifiant).
+let publicCache = null;
+
+async function loadPublic() {
+  if (!publicCache) {
+    publicCache = new Map();
+    for (const p of await publicLists()) publicCache.set(p.id, p);
+  }
+  return publicCache;
+}
+
+export function invalidateLists() {
+  indexCache = null;
+  publicCache = null;
+  listCache.clear();
+}
+
+export async function publicData(id) {
+  const p = (await loadPublic()).get(id);
+  return p && !p.hidden ? structuredClone(p.data) : null;
+}
 
 export async function loadIndex() {
   if (!indexCache) {
@@ -21,6 +42,20 @@ export async function loadIndex() {
       const res = await fetch('lists/index.json', { cache: 'no-cache' });
       if (res.ok) remote = (await res.json()).lists || [];
     } catch (e) { console.warn('index.json introuvable', e); }
+    const pub = await loadPublic();
+    remote = remote.filter(l => !pub.has(l.id));
+    for (const p of pub.values()) {
+      if (p.hidden || !p.data) continue;
+      const img = (p.data.columns || []).find(c => c.type === 'image');
+      const first = img && (p.data.rows || []).map(r => r[img.key]).find(v => v && (typeof v === 'string' || v.src));
+      const src = typeof first === 'string' ? first : first?.src;
+      remote.push({
+        id: p.id, title: p.title, description: p.data.description || '', count: (p.data.rows || []).length,
+        columns: (p.data.columns || []).map(c => c.label), online: true,
+        ...(src && !src.startsWith('data:') ? { cover: src } : {}),
+      });
+    }
+    remote.sort((a, b) => a.title.localeCompare(b.title, 'fr'));
     indexCache = remote;
   }
   const remoteIds = new Set(indexCache.map(l => l.id));
@@ -65,6 +100,12 @@ export async function loadList(id) {
     return prepare(structuredClone(c.list_snapshot), id, 'lists/');
   }
   if (!listCache.has(id)) {
+    const pub = (await loadPublic()).get(id);
+    if (pub?.hidden) throw new Error(`Liste « ${id} » retirée`);
+    if (pub?.data) {
+      listCache.set(id, prepare(structuredClone(pub.data), id, 'lists/'));
+      return listCache.get(id);
+    }
     const res = await fetch(`lists/${encodeURIComponent(id)}.json`, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`Liste « ${id} » introuvable`);
     listCache.set(id, prepare(await res.json(), id, 'lists/'));

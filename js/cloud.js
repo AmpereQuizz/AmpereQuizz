@@ -20,8 +20,10 @@ function setMe(u) {
 
 async function loadProfile(user) {
   if (!user) return null;
-  const { data } = await sb.from('profiles').select('username').eq('id', user.id).maybeSingle();
-  return { id: user.id, username: data?.username || user.user_metadata?.username || '?' };
+  let { data, error } = await sb.from('profiles').select('username, is_admin').eq('id', user.id).maybeSingle();
+  // Avant l'installation de l'administration (supabase/admin.sql), la colonne is_admin n'existe pas.
+  if (error) ({ data } = await sb.from('profiles').select('username').eq('id', user.id).maybeSingle());
+  return { id: user.id, username: data?.username || user.user_metadata?.username || '?', isAdmin: !!data?.is_admin };
 }
 
 export async function initCloud() {
@@ -98,6 +100,23 @@ export async function saveMyList(id, list) {
 
 export async function deleteMyList(id) {
   check(await sb.from('user_lists').delete().eq('id', id));
+}
+
+// ---------- Listes publiques (écrites par les administrateurs) ----------
+
+export async function publicLists() {
+  if (!sb) return [];
+  const { data, error } = await sb.from('public_lists').select('id, title, data, hidden, updated_at');
+  if (error) { console.warn('Listes publiques indisponibles', error.message); return []; }
+  return data;
+}
+
+export async function savePublicList(id, list) {
+  check(await sb.from('public_lists').upsert({ id, title: list.title || id, data: list, hidden: false, updated_at: new Date().toISOString() }).select('id'));
+}
+
+export async function hidePublicList(id, title) {
+  check(await sb.from('public_lists').upsert({ id, title: title || id, data: null, hidden: true, updated_at: new Date().toISOString() }).select('id'));
 }
 
 // ---------- Scores ----------
