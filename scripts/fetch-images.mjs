@@ -6,7 +6,23 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'lists');
-const UA = 'quizz-static-site/1.0 (image fetcher run from GitHub Actions)';
+const repo = process.env.GITHUB_REPOSITORY;
+const UA = `quizz-static-site/1.0 (${repo ? 'https://github.com/' + repo : 'local'}) node-fetch`;
+const sleep = ms => new Promise(ok => setTimeout(ok, ms));
+
+// Wikimedia limite le débit : on attend et on réessaie en cas de 429 / 5xx.
+async function get(url) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { headers: { 'User-Agent': UA, 'Api-User-Agent': UA } });
+    if ((res.status === 429 || res.status >= 500) && attempt < 6) {
+      const wait = (Number(res.headers.get('retry-after')) || 2 ** attempt * 2) * 1000;
+      console.log(`  … ${res.status}, nouvel essai dans ${Math.round(wait / 1000)} s`);
+      await sleep(Math.min(wait, 60000));
+      continue;
+    }
+    return res;
+  }
+}
 const WIDTH = 800;
 
 const slug = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -16,7 +32,7 @@ const stripHtml = s => String(s ?? '').replace(/<[^>]*>/g, '').replace(/&amp;/g,
 
 async function api(host, params) {
   const url = `https://${host}/w/api.php?` + new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', ...params });
-  const res = await fetch(url, { headers: { 'User-Agent': UA } });
+  const res = await get(url);
   if (!res.ok) throw new Error(`${host} ${res.status}`);
   return res.json();
 }
@@ -85,7 +101,7 @@ for (const f of files) {
         const r = await resolve(v);
         const ext = (r.url.match(/\.(jpe?g|png|webp|gif|svg)(?:$|\?)/i)?.[1] || 'jpg').toLowerCase().replace('jpeg', 'jpg');
         const rel = `img/${listId}/${row.id || slug(Object.values(row)[0]) || 'l' + i}-${key}.${ext}`;
-        const res = await fetch(r.url, { headers: { 'User-Agent': UA } });
+        const res = await get(r.url);
         if (!res.ok) throw new Error(`téléchargement ${res.status}`);
         await mkdir(dirname(join(root, rel)), { recursive: true });
         await writeFile(join(root, rel), Buffer.from(await res.arrayBuffer()));
@@ -93,7 +109,7 @@ for (const f of files) {
         dirty = true;
         changed++;
         console.log(`✓ ${listId} / ${row.id || i} : ${r.file} (${r.credit}, ${r.license})`);
-        await new Promise(ok => setTimeout(ok, 150));
+        await sleep(1000);
       } catch (e) {
         errors++;
         console.warn(`✗ ${listId} / ${row.id || i} : ${e.message}`);
