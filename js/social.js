@@ -5,7 +5,7 @@ import { startSession, challengeQuestions } from './quiz.js';
 import {
   cloudEnabled, currentUser, signIn, signUp, signOut, changePassword, USERNAME_RE,
   leaderboard, listLeaderboard, playedLists, recentScores, recentChallenges, getChallenge, challengeResults,
-  allUsers, setAdmin,
+  allUsers, setAdmin, categoriesData,
 } from './cloud.js';
 
 const disabledHTML = '<div class="empty">Les comptes ne sont pas encore activés sur ce site.</div>';
@@ -190,6 +190,7 @@ export async function renderAdmin(el) {
       <p class="muted">${users.length} utilisateur${users.length > 1 ? 's' : ''} inscrit${users.length > 1 ? 's' : ''} · ${admins} admin${admins > 1 ? 's' : ''}.
       Un admin peut publier, modifier et retirer les listes du site depuis l’éditeur.
       Seul le super admin peut nommer ou retirer un admin, et personne ne peut retirer le super admin.</p></div>
+    <p class="hint" id="cat-status">Vérification des dossiers…</p>
     <p class="hint">📁 Les dossiers se gèrent directement sur l’<a href="#/">accueil</a> : bouton « + Nouveau dossier », menu ⋯ sur chaque dossier ou liste, et glisser-déposer.</p>
     <h2>Utilisateurs</h2>
     <div class="table-wrap"><table class="users">
@@ -204,6 +205,9 @@ export async function renderAdmin(el) {
             : me.isSuper ? `<button class="btn small" data-id="${u.id}" data-v="1">Rendre admin</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table></div>
   </section>`;
+  categoriesData()
+    .then(r => { $('#cat-status', el).textContent = `✓ Dossiers activés dans Supabase (${r.cats.length} dossier${r.cats.length > 1 ? 's' : ''}).`; })
+    .catch(e => { $('#cat-status', el).textContent = `✗ Dossiers pas activés dans Supabase : ${e.message}`; });
   $$('[data-id]', el).forEach(b => b.onclick = async () => {
     const value = b.dataset.v === '1';
     const user = users.find(u => u.id === b.dataset.id);
