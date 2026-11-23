@@ -13,18 +13,15 @@ language sql stable security definer set search_path = public as $$
 $$;
 grant execute on function public.is_super_admin() to anon, authenticated;
 
--- Tout admin peut nommer un admin ; seul le super admin peut en retirer un ; personne ne touche au super admin.
+-- Seul le super admin peut nommer ou retirer un admin ; personne ne touche au super admin.
 create or replace function public.set_admin(target uuid, value boolean) returns void
 language plpgsql security definer set search_path = public as $$
 begin
-  if not public.is_admin() then
-    raise exception 'Réservé aux administrateurs';
+  if not public.is_super_admin() then
+    raise exception 'Seul le super admin peut nommer ou retirer un admin';
   end if;
   if (select is_super_admin from public.profiles where id = target) then
     raise exception 'Le super admin ne peut pas être modifié';
-  end if;
-  if not value and not public.is_super_admin() then
-    raise exception 'Seul le super admin peut retirer un admin';
   end if;
   update public.profiles set is_admin = value where id = target;
 end $$;

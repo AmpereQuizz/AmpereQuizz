@@ -188,8 +188,8 @@ export async function renderAdmin(el) {
   el.innerHTML = `<section>
     <div class="page-head"><h1>Admin</h1>
       <p class="muted">${users.length} utilisateur${users.length > 1 ? 's' : ''} inscrit${users.length > 1 ? 's' : ''} · ${admins} admin${admins > 1 ? 's' : ''}.
-      Un admin peut publier, modifier et retirer les listes du site depuis l’éditeur, et nommer d’autres admins.
-      Seul le super admin peut retirer un admin, et personne ne peut retirer le super admin.</p></div>
+      Un admin peut publier, modifier et retirer les listes du site depuis l’éditeur.
+      Seul le super admin peut nommer ou retirer un admin, et personne ne peut retirer le super admin.</p></div>
     <div class="table-wrap"><table class="users">
       <thead><tr><th>Pseudo</th><th>Inscrit le</th><th>Parties</th><th>Points</th><th>Rôle</th></tr></thead>
       <tbody>${users.map(u => {
@@ -199,7 +199,7 @@ export async function renderAdmin(el) {
           <td>${s?.sessions ?? 0}</td><td>${s?.points ?? 0}</td>
           <td class="nowrap">${u.is_super_admin ? '<span class="tag admin-tag">👑 super admin</span>'
             : u.is_admin ? `<span class="tag admin-tag">admin</span> ${me.isSuper ? `<button class="btn small ghost" data-id="${u.id}" data-v="0">Retirer admin</button>` : ''}`
-            : `<button class="btn small" data-id="${u.id}" data-v="1">Rendre admin</button>`}</td></tr>`;
+            : me.isSuper ? `<button class="btn small" data-id="${u.id}" data-v="1">Rendre admin</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table></div>
   </section>`;
   $$('[data-id]', el).forEach(b => b.onclick = async () => {
