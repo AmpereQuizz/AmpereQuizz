@@ -12,7 +12,7 @@ Fonctions :
 - Combinaisons de réglages enregistrées sur la page d'accueil.
 - Révision espacée des erreurs (tout de suite, puis 1, 3, 7, 16 jours).
 - Historique des scores.
-- Éditeur de listes dans le site : brouillons locaux, export `.zip`/`.json`, ou publication directe dans le dépôt avec un jeton GitHub.
+- Éditeur de listes dans le site : « Enregistrer sur le site » envoie la liste (et ses images) dans le dépôt en un seul commit ; elle apparaît sur tous les appareils après la publication automatique (~1 min). Chaque appareil se connecte une fois avec une clé GitHub « fine-grained » (Contents : Read and write sur ce dépôt), ou via le « lien pour connecter un autre appareil ». Export `.zip`/`.json` possible aussi.
 
 La progression (scores, révisions, brouillons) est stockée dans le navigateur (`localStorage`).
 

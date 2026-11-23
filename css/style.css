@@ -282,3 +282,10 @@ th { font-size: .8rem; color: var(--muted); font-weight: 600; }
   nav a { padding: .25rem .45rem; font-size: .92rem; }
   .col-row .seg { width: 100%; }
 }
+
+.panel.connected { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.panel.connected > span { flex: 1; min-width: 200px; }
+.panel.connected .hint { flex-basis: 100%; margin: 0; }
+.steps { margin: 0 0 1rem; padding-left: 1.3rem; }
+.steps li { margin-bottom: .3rem; }
+.btn.danger { color: var(--bad); border-color: var(--bad); }

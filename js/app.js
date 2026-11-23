@@ -3,7 +3,7 @@ import { $, $$, esc, formatWhen, toast } from './util.js';
 import { loadIndex } from './data.js';
 import { progress, history, favorites } from './store.js';
 import { renderSetup, renderReview, clearKeys, startSession } from './quiz.js';
-import { renderEditorHome, renderEditor } from './editor.js';
+import { renderEditorHome, renderEditor, renderConnectLink } from './editor.js';
 import { loadList } from './data.js';
 
 const app = $('#app');
@@ -15,6 +15,7 @@ const routes = [
   [/^#\/revision(?:\/(.+))?$/, (el, id) => renderReview(el, id ? decodeURIComponent(id) : null)],
   [/^#\/historique$/, renderHistory],
   [/^#\/editeur$/, renderEditorHome],
+  [/^#\/connexion\/([^/]+)\/(.+)$/, renderConnectLink],
   [/^#\/editeur\/(.+)$/, (el, id) => renderEditor(el, decodeURIComponent(id))],
 ];
 

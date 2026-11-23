@@ -22,7 +22,13 @@ export async function loadIndex() {
     } catch (e) { console.warn('index.json introuvable', e); }
     indexCache = remote;
   }
-  const local = Object.values(drafts.all()).map(d => ({
+  const remoteIds = new Set(indexCache.map(l => l.id));
+  const clean = d => d._publishedAt && !d._dirty && remoteIds.has(d.id);
+  // Brouillon enregistré sur le site et publié depuis un moment : plus besoin de la copie locale.
+  for (const d of Object.values(drafts.all())) {
+    if (clean(d) && Date.now() - d._publishedAt > 5 * 60000) drafts.remove(d._draftId);
+  }
+  const local = Object.values(drafts.all()).filter(d => !clean(d)).map(d => ({
     id: 'brouillon:' + d._draftId,
     title: d.title || 'Sans titre',
     description: d.description || '',

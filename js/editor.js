@@ -1,7 +1,8 @@
 // Éditeur de listes : brouillons locaux, export (.zip / .json), publication GitHub.
 import { $, $$, esc, slugify, toast } from './util.js';
 import { loadIndex, TYPES, textOf, mediaInfo, isEmpty } from './data.js';
-import { drafts, settings } from './store.js';
+import { drafts } from './store.js';
+import { connection, connect, disconnect, commitFiles, readFile, guessRepo } from './github.js';
 
 const newDraftId = () => 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -10,24 +11,27 @@ const newDraftId = () => 'd' + Date.now().toString(36) + Math.random().toString(
 export async function renderEditorHome(el) {
   const all = Object.values(drafts.all());
   const index = (await loadIndex()).filter(l => !l.draft);
+  const conn = connection();
   el.innerHTML = `<section>
     <div class="page-head"><h1>Éditeur de listes</h1>
-      <p class="muted">Les brouillons restent dans ce navigateur. On peut les jouer tout de suite, puis les télécharger ou les publier dans le dépôt GitHub pour les rendre permanents.</p></div>
+      <p class="muted">Créez ou modifiez une liste, puis « Enregistrer sur le site » : elle apparaît sur tous vos appareils environ une minute après.</p></div>
+    ${connectPanel(conn)}
     <div class="actions">
       <button class="btn primary" id="new">+ Nouvelle liste</button>
       <label class="btn">Importer un .json<input type="file" accept=".json,application/json" id="import" hidden></label>
     </div>
-    ${index.length ? `<div class="panel"><h2>Modifier une liste du site</h2>
-      <p class="hint">Crée un brouillon à partir d’une copie ; la liste publiée n’est changée qu’à la publication.</p>
-      <div class="chips">${index.map(l => `<button class="chip" data-copy="${esc(l.id)}">${esc(l.title)}</button>`).join('')}</div></div>` : ''}
-    <h2>Mes brouillons</h2>
+    ${index.length ? `<div class="panel"><h2>Listes du site</h2>
+      <p class="hint">Choisissez une liste pour la modifier.</p>
+      <div class="chips">${index.map(l => `<button class="chip" data-copy="${esc(l.id)}">✎ ${esc(l.title)}</button>`).join('')}</div></div>` : ''}
+    <h2>En cours sur cet appareil</h2>
     ${all.length ? `<div class="list-grid">${all.map(d => `
       <a class="list-card" href="#/editeur/${d._draftId}">
         <h3>${esc(d.title || 'Sans titre')}</h3>
-        <p class="small muted">${(d.rows || []).length} fiches · ${(d.columns || []).length} colonnes</p>
-      </a>`).join('')}</div>` : '<div class="empty">Aucun brouillon.</div>'}
+        <p class="small muted">${(d.rows || []).length} fiches · ${d._publishedAt && !d._dirty ? '✓ enregistrée sur le site' : 'pas encore enregistrée sur le site'}</p>
+      </a>`).join('')}</div>` : '<div class="empty">Rien en cours.</div>'}
   </section>`;
 
+  bindConnect(el, () => renderEditorHome(el));
   $('#new', el).onclick = () => {
     const d = {
       _draftId: newDraftId(), id: '', title: '', description: '',
@@ -50,13 +54,77 @@ export async function renderEditorHome(el) {
     } catch (err) { toast('Fichier invalide : ' + err.message, 'err'); }
   };
   $$('[data-copy]', el).forEach(b => b.onclick = async () => {
-    const res = await fetch(`lists/${encodeURIComponent(b.dataset.copy)}.json`, { cache: 'no-cache' });
-    const data = await res.json();
-    data.id ||= b.dataset.copy;
+    const id = b.dataset.copy;
+    // Un brouillon déjà ouvert pour cette liste ? On le reprend.
+    const existing = Object.values(drafts.all()).find(x => x._origin === id);
+    if (existing?._dirty) { location.hash = '#/editeur/' + existing._draftId; return; }
+    if (existing) drafts.remove(existing._draftId);
+    const fresh = await readFile(`lists/${id}.json`);
+    const data = fresh ? JSON.parse(fresh) : await (await fetch(`lists/${encodeURIComponent(id)}.json`, { cache: 'no-cache' })).json();
+    data.id = id;
+    data._origin = id;
     data._draftId = newDraftId();
     drafts.save(data);
     location.hash = '#/editeur/' + data._draftId;
   });
+}
+
+function connectPanel(conn) {
+  if (conn) {
+    return `<div class="panel connected"><span>✓ Cet appareil peut enregistrer sur le site (${esc(conn.repo)}).</span>
+      <button class="btn ghost small" id="gh-copy">Lien pour connecter un autre appareil</button>
+      <button class="btn ghost small" id="gh-off">Déconnecter</button>
+      <p class="hint" id="gh-copy-hint" hidden>Lien copié. Ouvrez-le sur votre autre appareil (en vous l’envoyant par message, par exemple) : il sera connecté directement. Ne le partagez avec personne d’autre, il permet de modifier le site.</p></div>`;
+  }
+  return `<div class="panel">
+    <h2>Connecter cet appareil (une seule fois)</h2>
+    <p class="hint">Pour enregistrer des listes sur le site, il faut une clé d’accès GitHub :</p>
+    <ol class="steps">
+      <li>Ouvrez <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">cette page GitHub</a> (connecté à votre compte).</li>
+      <li>Nom : « quizz ». Expiration : la plus longue proposée.</li>
+      <li><b>Repository access</b> : « Only select repositories » → choisissez <b>${esc(guessRepo() || 'votre dépôt')}</b>.</li>
+      <li><b>Permissions</b> → Repository permissions → <b>Contents</b> : « Read and write ».</li>
+      <li>« Generate token », copiez la clé et collez-la ici.</li>
+    </ol>
+    <div class="inline-form"><input id="gh-token" type="password" placeholder="github_pat_…" autocomplete="off" aria-label="Clé GitHub">
+      <button class="btn primary" id="gh-connect">Connecter</button></div>
+    ${guessRepo() ? '' : '<label class="small muted">Dépôt (propriétaire/nom)<input id="gh-repo" placeholder="gladuro/quizz"></label>'}
+    <p class="hint" id="gh-msg"></p>
+  </div>`;
+}
+
+function bindConnect(el, done) {
+  const btn = $('#gh-connect', el);
+  if (btn) btn.onclick = async () => {
+    const msg = $('#gh-msg', el);
+    const repo = guessRepo() || $('#gh-repo', el)?.value || '';
+    const token = $('#gh-token', el).value;
+    if (!token.trim() || !/^[\w.-]+\/[\w.-]+$/.test(repo.trim())) { msg.textContent = 'Collez la clé (et le dépôt).'; return; }
+    btn.disabled = true;
+    msg.textContent = 'Vérification…';
+    try { await connect(token, repo); toast('Appareil connecté'); done(); }
+    catch (e) { msg.textContent = 'Impossible : ' + e.message; btn.disabled = false; }
+  };
+  const off = $('#gh-off', el);
+  if (off) off.onclick = () => { disconnect(); done(); };
+  const copy = $('#gh-copy', el);
+  if (copy) copy.onclick = async () => {
+    const c = connection();
+    const link = `${location.origin}${location.pathname}#/connexion/${encodeURIComponent(c.repo)}/${encodeURIComponent(c.token)}`;
+    try { await navigator.clipboard.writeText(link); } catch { prompt('Copiez ce lien :', link); }
+    $('#gh-copy-hint', el).hidden = false;
+  };
+}
+
+// Ouverture d'un lien de connexion venant d'un autre appareil.
+export async function renderConnectLink(el, repo, token) {
+  history.replaceState(null, '', location.pathname + '#/editeur');
+  el.innerHTML = '<div class="empty">Connexion…</div>';
+  try {
+    await connect(decodeURIComponent(token), decodeURIComponent(repo));
+    toast('Appareil connecté : vous pouvez enregistrer des listes sur le site');
+  } catch (e) { toast('Lien de connexion invalide : ' + e.message, 'err'); }
+  renderEditorHome(el);
 }
 
 // ======================= Édition d'un brouillon =======================
@@ -69,6 +137,7 @@ export function renderEditor(el, draftId) {
   let saveTimer = null;
   const save = (now = false) => {
     clearTimeout(saveTimer);
+    d._dirty = true;
     const run = () => {
       if (!drafts.save(d)) toast('Stockage du navigateur plein : exportez la liste ou réduisez les images', 'err');
       const s = $('#saved', el);
@@ -80,7 +149,7 @@ export function renderEditor(el, draftId) {
   function render() {
     el.innerHTML = `<section class="editor">
       <div class="page-head">
-        <a href="#/editeur" class="back">← Brouillons</a>
+        <a href="#/editeur" class="back">← Éditeur</a>
         <h1>${esc(d.title || 'Nouvelle liste')}</h1>
         <p class="small muted" id="saved"></p>
       </div>
@@ -118,15 +187,21 @@ export function renderEditor(el, draftId) {
       </div>
 
       <div class="panel">
-        <h2>Utiliser la liste</h2>
+        <h2>Enregistrer</h2>
         <div class="actions">
-          <a class="btn primary" href="#/liste/brouillon:${d._draftId}">▶ S’entraîner avec ce brouillon</a>
-          <button class="btn" id="dl-zip">Télécharger (.zip avec images)</button>
-          <button class="btn" id="dl-json">Télécharger le .json seul</button>
-          <button class="btn ghost" id="del">Supprimer le brouillon</button>
+          ${connection()
+            ? `<button class="btn primary big" id="publish">💾 Enregistrer sur le site</button>`
+            : `<a class="btn primary" href="#/editeur">Connecter cet appareil pour enregistrer sur le site</a>`}
+          <a class="btn" href="#/liste/brouillon:${d._draftId}">▶ Essayer</a>
         </div>
-        <details class="gh"><summary>Publier directement dans le dépôt GitHub</summary>
-          ${githubForm()}
+        <p class="hint" id="pub-msg">${d._publishedAt ? (d._dirty ? 'Modifications pas encore enregistrées sur le site.' : '✓ Enregistrée sur le site.') : 'Tant qu’elle n’est pas enregistrée sur le site, la liste n’existe que sur cet appareil.'}</p>
+        <details class="gh"><summary>Autres options</summary>
+          <div class="actions">
+            <button class="btn" id="dl-zip">Télécharger (.zip avec images)</button>
+            <button class="btn" id="dl-json">Télécharger le .json seul</button>
+            <button class="btn ghost" id="del">Abandonner ce brouillon</button>
+            ${d._origin && connection() ? `<button class="btn ghost danger" id="unpublish">Supprimer la liste du site</button>` : ''}
+          </div>
         </details>
       </div>
     </section>`;
@@ -137,7 +212,7 @@ export function renderEditor(el, draftId) {
     if (c.type === 'image' || c.type === 'audio') {
       const m = mediaInfo({ _base: 'lists/' }, v);
       const shown = !v ? '' : typeof v === 'string' ? (v.startsWith('data:') ? '(fichier importé)' : v)
-        : v.wikipedia ? 'wikipedia:' + v.wikipedia : (v.src?.startsWith('data:') ? '(fichier importé)' : v.src || '');
+        : v.wikipedia ? 'wikipedia:' + [].concat(v.wikipedia)[0] : (v.src?.startsWith('data:') ? '(fichier importé)' : v.src || '');
       const preview = m?.src ? (c.type === 'image' ? `<img src="${esc(m.src)}" alt="">` : '🔊') : (v?.wikipedia ? '🌐' : '');
       return `<div class="media-cell"><span class="pv">${preview}</span>
         <input data-media value="${esc(shown)}" placeholder="adresse ou wikipedia:…">
@@ -289,45 +364,52 @@ export function renderEditor(el, draftId) {
       drafts.remove(d._draftId);
       location.hash = '#/editeur';
     };
-    bindGithub();
+    bindPublish();
   }
 
-  function githubForm() {
-    const s = settings.get();
-    const guess = guessRepo();
-    return `<p class="hint">Il faut un jeton GitHub « fine-grained » avec l’autorisation <b>Contents : Read and write</b> sur le dépôt. Le site est reconstruit automatiquement une à deux minutes après.</p>
-      <div class="grid2">
-        <label>Dépôt (propriétaire/nom)<input id="gh-repo" value="${esc(s.ghRepo || guess)}" placeholder="gladuro/quizz"></label>
-        <label>Branche (vide = par défaut)<input id="gh-branch" value="${esc(s.ghBranch || '')}"></label>
-        <label class="span2">Jeton<input id="gh-token" type="password" value="${esc(s.ghToken || '')}" autocomplete="off"></label>
-        <label class="check span2"><input type="checkbox" id="gh-remember" ${s.ghToken ? 'checked' : ''}> Mémoriser le jeton dans ce navigateur</label>
-      </div>
-      <div class="actions"><button class="btn primary" id="gh-push">Publier</button></div>
-      <pre class="log" id="gh-log" hidden></pre>`;
-  }
-
-  function bindGithub() {
-    $('#gh-push', el).onclick = async () => {
-      const repo = $('#gh-repo', el).value.trim(), branch = $('#gh-branch', el).value.trim(), token = $('#gh-token', el).value.trim();
-      settings.set({ ghRepo: repo, ghBranch: branch, ghToken: $('#gh-remember', el).checked ? token : '' });
-      const log = $('#gh-log', el);
-      log.hidden = false;
-      log.textContent = '';
-      const say = m => { log.textContent += m + '\n'; };
-      if (!/^[\w.-]+\/[\w.-]+$/.test(repo) || !token) { say('Indiquez le dépôt et le jeton.'); return; }
-      if (!d.title || !fileId(d)) { say('Donnez d’abord un titre à la liste.'); return; }
-      const btn = $('#gh-push', el);
-      btn.disabled = true;
+  function bindPublish() {
+    const msg = $('#pub-msg', el);
+    const pub = $('#publish', el);
+    if (pub) pub.onclick = async () => {
+      if (!d.title?.trim()) { msg.textContent = 'Donnez d’abord un titre à la liste.'; $('[data-meta="title"]', el).focus(); return; }
+      const id = fileId(d);
+      if (id !== d._origin) {
+        const index = await loadIndex();
+        if (index.some(l => !l.draft && l.id === id) && pub.dataset.confirm !== id) {
+          pub.dataset.confirm = id;
+          msg.textContent = `Une liste « ${id} » existe déjà sur le site : cliquez encore pour la remplacer, ou changez l’identifiant.`;
+          return;
+        }
+      }
+      pub.disabled = true;
       try {
         const { json, files } = await exportList(d, true);
-        const all = [...files.map(f => ({ path: 'lists/' + f.name, data: f.data })), { path: `lists/${fileId(d)}.json`, data: new TextEncoder().encode(json) }];
-        for (const f of all) {
-          say('Envoi de ' + f.path + '…');
-          await githubPut(repo, branch, token, f.path, f.data, `Liste « ${d.title} » : ${f.path.split('/').pop()}`);
-        }
-        say('Terminé. Le site sera à jour dans une à deux minutes.');
-      } catch (e) { say('Erreur : ' + e.message); }
-      btn.disabled = false;
+        const all = [...files.map(f => ({ path: 'lists/' + f.name, data: f.data })), { path: `lists/${id}.json`, data: new TextEncoder().encode(json) }];
+        // Identifiant changé : l'ancienne version est retirée du site.
+        if (d._origin && d._origin !== id) all.push({ path: `lists/${d._origin}.json`, data: null });
+        await commitFiles(all, `Liste « ${d.title} »`, step => { msg.textContent = step; });
+        // Les fichiers importés sont désormais sur le site : on garde le brouillon léger.
+        const saved = JSON.parse(json);
+        Object.assign(d, { columns: saved.columns, rows: saved.rows, id, _origin: id, _publishedAt: Date.now(), _dirty: false });
+        drafts.save(d);
+        render();
+        $('#pub-msg', el).textContent = '✓ Enregistrée sur le site. Elle sera visible sur tous vos appareils dans une minute environ (images Wikipédia comprises).';
+        toast('Liste enregistrée sur le site');
+      } catch (e) {
+        msg.textContent = 'Échec de l’enregistrement : ' + e.message;
+        pub.disabled = false;
+      }
+    };
+    const un = $('#unpublish', el);
+    if (un) un.onclick = async () => {
+      if (!un.dataset.confirm) { un.dataset.confirm = 1; un.textContent = 'Cliquer encore pour supprimer du site'; return; }
+      un.disabled = true;
+      try {
+        await commitFiles([{ path: `lists/${d._origin}.json`, data: null }], `Suppression de la liste « ${d.title} »`, step => { msg.textContent = step; });
+        drafts.remove(d._draftId);
+        toast('Liste supprimée du site (dans une minute environ)');
+        location.hash = '#/editeur';
+      } catch (e) { msg.textContent = 'Échec : ' + e.message; un.disabled = false; }
     };
   }
 
@@ -335,13 +417,6 @@ export function renderEditor(el, draftId) {
 }
 
 const fileId = d => slugify(d.id || d.title);
-
-function guessRepo() {
-  const m = location.hostname.match(/^([^.]+)\.github\.io$/);
-  if (!m) return '';
-  const seg = location.pathname.split('/').filter(Boolean)[0];
-  return seg ? `${m[1]}/${seg}` : `${m[1]}/${m[1]}.github.io`;
-}
 
 // Transforme le brouillon en JSON propre ; extrait les fichiers importés.
 async function exportList(d, extractFiles) {
@@ -419,23 +494,6 @@ function download(blob, name) {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 
-function bytesToBase64(bytes) {
-  let s = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return btoa(s);
-}
-
-async function githubPut(repo, branch, token, path, bytes, message) {
-  const api = `https://api.github.com/repos/${repo}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
-  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
-  let sha;
-  const get = await fetch(api + (branch ? `?ref=${encodeURIComponent(branch)}` : ''), { headers, cache: 'no-store' });
-  if (get.ok) sha = (await get.json()).sha;
-  else if (get.status !== 404) throw new Error(`${get.status} ${(await get.json().catch(() => ({}))).message || ''}`);
-  const body = { message, content: bytesToBase64(bytes), ...(branch ? { branch } : {}), ...(sha ? { sha } : {}) };
-  const put = await fetch(api, { method: 'PUT', headers, body: JSON.stringify(body) });
-  if (!put.ok) throw new Error(`${put.status} ${(await put.json().catch(() => ({}))).message || ''}`);
-}
 
 // ZIP minimal sans compression (suffisant pour des images déjà compressées).
 const CRC_TABLE = (() => {
