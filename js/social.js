@@ -5,6 +5,7 @@ import { startSession, challengeQuestions } from './quiz.js';
 import {
   cloudEnabled, currentUser, signIn, signUp, signOut, changePassword, USERNAME_RE,
   leaderboard, listLeaderboard, playedLists, recentScores, recentChallenges, getChallenge, challengeResults,
+  allUsers, setAdmin,
 } from './cloud.js';
 
 const disabledHTML = '<div class="empty">Les comptes ne sont pas encore activés sur ce site.</div>';
@@ -173,4 +174,46 @@ export async function renderChallenge(el, id) {
     if (!qs.length) { toast('Les questions de ce défi ne correspondent plus à la liste', 'err'); return; }
     startSession(el, list, { ...c.config, filters: {} }, { questions: qs, challenge: { id, listId: c.list_id } });
   };
+}
+
+// ======================= Admin =======================
+
+export async function renderAdmin(el) {
+  const me = currentUser();
+  if (!me?.isAdmin) { el.innerHTML = '<div class="empty">Réservé aux administrateurs.</div>'; return; }
+  const [users, board] = await Promise.all([allUsers(), leaderboard().catch(() => [])]);
+  const stats = new Map(board.map(b => [b.username, b]));
+  const admins = users.filter(u => u.is_admin).length;
+  el.innerHTML = `<section>
+    <div class="page-head"><h1>Admin</h1>
+      <p class="muted">${users.length} utilisateur${users.length > 1 ? 's' : ''} inscrit${users.length > 1 ? 's' : ''} · ${admins} admin${admins > 1 ? 's' : ''}.
+      Un admin peut publier, modifier et retirer les listes du site depuis l’éditeur, et gérer les admins ici.</p></div>
+    <div class="table-wrap"><table class="users">
+      <thead><tr><th>Pseudo</th><th>Inscrit le</th><th>Parties</th><th>Points</th><th>Rôle</th></tr></thead>
+      <tbody>${users.map(u => {
+        const s = stats.get(u.username);
+        return `<tr${u.id === me.id ? ' class="me"' : ''}><td><b>${esc(u.username)}</b>${u.id === me.id ? ' <span class="muted small">(vous)</span>' : ''}</td>
+          <td class="small">${new Date(u.created_at).toLocaleDateString('fr-FR')}</td>
+          <td>${s?.sessions ?? 0}</td><td>${s?.points ?? 0}</td>
+          <td class="nowrap">${u.is_admin ? '<span class="tag admin-tag">admin</span> ' : ''}
+            <button class="btn small ${u.is_admin ? 'ghost' : ''}" data-id="${u.id}" data-v="${u.is_admin ? '0' : '1'}"
+              ${u.is_admin && admins === 1 ? 'disabled title="Il faut au moins un admin"' : ''}>${u.is_admin ? 'Retirer admin' : 'Rendre admin'}</button></td></tr>`;
+      }).join('')}</tbody></table></div>
+  </section>`;
+  $$('[data-id]', el).forEach(b => b.onclick = async () => {
+    const value = b.dataset.v === '1';
+    const user = users.find(u => u.id === b.dataset.id);
+    if (!b.dataset.confirm) {
+      b.dataset.confirm = 1;
+      b.textContent = value ? `Confirmer : ${user.username} admin` : (user.id === me.id ? 'Confirmer : ne plus être admin' : 'Confirmer le retrait');
+      return;
+    }
+    b.disabled = true;
+    try {
+      await setAdmin(user.id, value);
+      toast(value ? `${user.username} est maintenant admin` : `${user.username} n’est plus admin`);
+      if (user.id === me.id && !value) { location.hash = '#/'; return; }
+      renderAdmin(el);
+    } catch (e) { toast(e.message, 'err'); b.disabled = false; }
+  });
 }

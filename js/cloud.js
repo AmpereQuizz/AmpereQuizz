@@ -119,6 +119,21 @@ export async function hidePublicList(id, title) {
   check(await sb.from('public_lists').upsert({ id, title: title || id, data: null, hidden: true, updated_at: new Date().toISOString() }).select('id'));
 }
 
+// ---------- Administration ----------
+
+export async function allUsers() {
+  return check(await sb.from('profiles').select('id, username, is_admin, created_at').order('created_at', { ascending: true }));
+}
+
+export async function setAdmin(target, value) {
+  const { error } = await sb.rpc('set_admin', { target, value });
+  if (error) {
+    if (/Could not find the function|PGRST202/i.test(error.message + error.code)) throw new Error('il faut d’abord coller supabase/admin-users.sql dans Supabase');
+    throw new Error(error.message);
+  }
+  if (target === me?.id) setMe({ ...me, isAdmin: value });
+}
+
 // ---------- Scores ----------
 
 export async function submitScore(s) {

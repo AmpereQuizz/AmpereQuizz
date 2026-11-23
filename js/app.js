@@ -6,7 +6,7 @@ import { renderSetup, renderReview, clearKeys, startSession } from './quiz.js';
 import { renderEditorHome, renderEditor, renderConnectLink } from './editor.js';
 import { loadList } from './data.js';
 import { cloudEnabled, initCloud, currentUser, onUserChange } from './cloud.js';
-import { renderAccount, renderLeaderboard, renderChallenge } from './social.js';
+import { renderAccount, renderLeaderboard, renderChallenge, renderAdmin } from './social.js';
 
 const app = $('#app');
 
@@ -20,6 +20,7 @@ const routes = [
   [/^#\/connexion\/([^/]+)\/(.+)$/, renderConnectLink],
   [/^#\/editeur\/(.+)$/, (el, id) => renderEditor(el, decodeURIComponent(id))],
   [/^#\/compte$/, renderAccount],
+  [/^#\/admin$/, renderAdmin],
   [/^#\/classement(?:\/(\w+))?$/, (el, tab) => renderLeaderboard(el, tab || 'general')],
   [/^#\/defi\/([\w-]+)$/, renderChallenge],
 ];
@@ -120,6 +121,7 @@ function updateAccount() {
   if (!a) return;
   a.hidden = !cloudEnabled;
   $('#rank-link').hidden = !cloudEnabled;
+  $('#admin-link').hidden = !currentUser()?.isAdmin;
   a.textContent = currentUser() ? '👤 ' + currentUser().username : 'Se connecter';
 }
 onUserChange(updateAccount);

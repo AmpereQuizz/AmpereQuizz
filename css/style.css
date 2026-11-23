@@ -303,3 +303,8 @@ table.rank tr.me td { background: var(--hl); }
 table.rank td:first-child { width: 2.5rem; text-align: center; }
 .share { display: flex; flex-direction: column; gap: .5rem; }
 .share input { flex: 1; font-size: .9rem; }
+
+.admin-tag { background: var(--accent); color: var(--accent-ink); }
+table.users td { white-space: nowrap; }
+table.users tr.me td { background: var(--hl); }
+@media (max-width: 560px) { table.users th:nth-child(2), table.users td:nth-child(2) { display: none; } }
