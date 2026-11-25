@@ -6,6 +6,7 @@ Avant de s'entraîner, on choisit les colonnes **montrées** et celles **à trou
 
 Fonctions :
 
+- Cartes mémoire : on choisit les colonnes du recto et du verso (plusieurs possibles), on retourne la carte, puis on glisse à gauche si on la maîtrise, à droite sinon (ou boutons et flèches ← → sur ordinateur). Les cartes pas maîtrisées reviennent jusqu'à ce que tout soit su.
 - Choix multiple, saisie libre (accents, majuscules, articles et petites fautes tolérés ; « Louis 14 » = « Louis XIV »), remise dans l'ordre (dates ou nombres).
 - Après chaque réponse, la fiche complète s'affiche.
 - Filtres par étiquettes et par colonnes à peu de valeurs (famille, dynastie…).

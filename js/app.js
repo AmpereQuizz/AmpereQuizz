@@ -134,7 +134,7 @@ function renderHistory(el) {
     s.n++; s.score += h.score; s.total += h.total;
     s.best = Math.max(s.best, h.total ? h.score / h.total : 0);
   }
-  const modes = { qcm: 'Choix multiple', libre: 'Saisie libre', chrono: 'Ordre' };
+  const modes = { qcm: 'Choix multiple', libre: 'Saisie libre', chrono: 'Ordre', cartes: 'Cartes mémoire' };
   el.innerHTML = `<section>
     <div class="page-head"><h1>Historique</h1></div>
     ${all.length ? `
