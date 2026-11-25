@@ -59,6 +59,7 @@ export async function renderSetup(el, listId, preset = null) {
           <button data-v="qcm">Choix multiple</button>
           <button data-v="libre">Saisie libre</button>
           ${hasOrder ? '<button data-v="chrono">Remettre dans l’ordre</button>' : ''}
+          <button data-v="cartes">Cartes mémoire</button>
         </div>
         <p class="hint" id="mode-hint"></p>
       </div>
@@ -122,9 +123,12 @@ export async function renderSetup(el, listId, preset = null) {
       qcm: 'Quatre propositions par colonne à trouver.',
       libre: 'Tapez la réponse : accents, majuscules et petites fautes de frappe sont tolérés. Les images et sons restent en choix multiple.',
       chrono: 'Quatre fiches à remettre dans l’ordre selon la colonne « Ordonner ».',
+      cartes: 'Retournez chaque carte, puis dites si vous la maîtrisez. Les cartes pas maîtrisées reviennent jusqu’à ce que tout soit su.',
     }[cfg.mode];
     $('#cols-hint', el).textContent = cfg.mode === 'chrono'
       ? 'Choisissez ce qui est montré pour chaque fiche, et la colonne qui sert à ordonner.'
+      : cfg.mode === 'cartes'
+      ? 'Recto : ce qu’on voit d’abord. Verso : ce qu’on découvre en retournant la carte. Plusieurs colonnes possibles de chaque côté.'
       : 'Montrée : affichée dans la question. À trouver : ce qu’on vous demande (une ou plusieurs). Seules les colonnes « À trouver » sont notées.';
     $$('.col-row', el).forEach(row => {
       const key = row.dataset.key;
@@ -132,7 +136,11 @@ export async function renderSetup(el, listId, preset = null) {
       $$('button', row).forEach(b => b.classList.toggle('on', b.dataset.v === r));
       $$('.find-btn', row).forEach(b => b.hidden = cfg.mode === 'chrono');
       $$('.order-btn', row).forEach(b => b.hidden = cfg.mode !== 'chrono');
+      $('[data-v="show"]', row).textContent = cfg.mode === 'cartes' ? 'Recto' : 'Montrée';
+      $('[data-v="find"]', row).textContent = cfg.mode === 'cartes' ? 'Verso' : 'À trouver';
     });
+    const dare = $('#dare', el);
+    if (dare) dare.hidden = cfg.mode === 'cartes';
     $$('#count button', el).forEach(b => b.classList.toggle('on', +b.dataset.v === cfg.count));
     $$('.chips', el).forEach(g => {
       const f = g.dataset.filter;
@@ -141,7 +149,9 @@ export async function renderSetup(el, listId, preset = null) {
     });
     const pool = applyFilters(list, cfg.filters);
     $('#pool', el).textContent = `${pool.length} fiche${pool.length > 1 ? 's' : ''} correspond${pool.length > 1 ? 'ent' : ''} aux filtres.`;
-    const ok = cfg.mode === 'chrono' ? !!cfg.orderCol : cfg.find.length > 0;
+    const ok = cfg.mode === 'chrono' ? !!cfg.orderCol
+      : cfg.mode === 'cartes' ? cfg.show.length > 0 && cfg.find.length > 0
+      : cfg.find.length > 0;
     $('#go', el).disabled = !ok || pool.length < (cfg.mode === 'chrono' ? 2 : 1);
   }
 
@@ -242,7 +252,9 @@ function buildQuestions(list, cfg) {
     }
     return qs;
   }
-  const usable = pool.filter(r => cfg.find.every(k => !isEmpty(r[k])) && (!cfg.show.length || cfg.show.some(k => !isEmpty(r[k]))));
+  const usable = cfg.mode === 'cartes'
+    ? pool.filter(r => cfg.show.some(k => !isEmpty(r[k])) && cfg.find.some(k => !isEmpty(r[k])))
+    : pool.filter(r => cfg.find.every(k => !isEmpty(r[k])) && (!cfg.show.length || cfg.show.some(k => !isEmpty(r[k]))));
   const rows = shuffle(usable);
   return (cfg.count ? rows.slice(0, cfg.count) : rows).map(row => ({ kind: 'q', row, show: cfg.show, find: cfg.find }));
 }
@@ -277,6 +289,7 @@ function buildChoices(list, col, row, pool) {
 // ======================= Déroulé =======================
 
 export function startSession(el, list, cfg, { questions = null, review = false, challenge = null } = {}) {
+  if (cfg.mode === 'cartes') return startFlashcards(el, list, cfg, questions && questions.map(q => q.row));
   const qs = questions || buildQuestions(list, cfg);
   if (!qs.length) { toast('Aucune question possible avec ces réglages', 'err'); return; }
   const pool = applyFilters(list, cfg.filters || {});
@@ -542,6 +555,182 @@ export function startSession(el, list, cfg, { questions = null, review = false, 
   window.scrollTo({ top: 0 });
 }
 
+// ======================= Cartes mémoire =======================
+// Recto = colonnes « show », verso = colonnes « find ». Glisser à gauche (ou ←) : maîtrisée,
+// à droite (ou →) : pas maîtrisée. Les cartes pas maîtrisées reviennent au tour suivant.
+
+function startFlashcards(el, list, cfg, givenRows = null) {
+  const rows = givenRows || buildQuestions(list, cfg).map(q => q.row);
+  if (!rows.length) { toast('Aucune carte possible avec ces réglages', 'err'); return; }
+  const col = k => list.columns.find(c => c.key === k);
+  const st = {
+    queue: shuffle(rows), again: [], round: 1, mastered: 0, total: rows.length,
+    misses: new Map(), flipped: false, busy: false, start: Date.now(),
+  };
+
+  function face(row, keys) {
+    const cols = keys.map(col).filter(c => c && !isEmpty(row[c.key]));
+    const media = cols.filter(isMedia).map(c => mediaHTML(list, c, row[c.key], 'big')).join('');
+    const texts = cols.filter(c => !isMedia(c)).map(c => {
+      const v = row[c.key];
+      const alt = Array.isArray(v) && v.length > 1 ? `<span class="alt">aussi : ${v.slice(1).map(esc).join(', ')}</span>` : '';
+      return `<div class="prompt-field"><span class="lbl">${esc(c.label)}</span><span class="val">${esc(display(c, v))}</span>${alt}</div>`;
+    }).join('');
+    return media + texts;
+  }
+
+  function counter() {
+    const left = st.total - st.mastered;
+    return `<span class="count">✓ <b>${st.mastered}</b> / ${st.total} · encore ${left}${st.round > 1 ? ` · tour ${st.round}` : ''}</span>`;
+  }
+
+  function render() {
+    const row = st.queue[0];
+    st.flipped = false;
+    st.busy = false;
+    el.innerHTML = `<section class="quiz flash">
+      <div class="quiz-head">
+        <button class="btn ghost small" id="quit">✕ Arrêter</button>
+        <div class="bar"><div style="width:${st.mastered / st.total * 100}%"></div></div>
+        ${counter()}
+      </div>
+      <div class="fc-stage">
+        <div class="fc" id="fc" tabindex="0" role="button" aria-label="Retourner la carte">
+          <div class="fc-inner">
+            <div class="fc-face fc-front"><span class="fc-side">Recto</span>${face(row, cfg.show)}</div>
+            <div class="fc-face fc-back" aria-hidden="true"><span class="fc-side">Verso</span>${face(row, cfg.find)}</div>
+          </div>
+          <div class="fc-stamp yes">✓ Maîtrisée</div>
+          <div class="fc-stamp no">✗ Pas encore</div>
+        </div>
+      </div>
+      <div class="fc-actions">
+        <button class="btn fc-yes" id="yes" title="Flèche gauche">← Maîtrisée</button>
+        <button class="btn" id="flip" title="Espace">↻ Retourner</button>
+        <button class="btn fc-no" id="no" title="Flèche droite">Pas encore →</button>
+      </div>
+      <p class="hint center">Touchez la carte pour la retourner, puis glissez-la à gauche si vous la maîtrisez, à droite sinon.
+        Au clavier : espace pour retourner, ← et →.</p>
+    </section>`;
+    const fc = $('#fc', el);
+    $('#quit', el).onclick = () => finish(true);
+    $('#flip', el).onclick = flip;
+    $('#yes', el).onclick = () => decide(true);
+    $('#no', el).onclick = () => decide(false);
+    swipe(fc);
+    onKeys(e => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); decide(true); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); decide(false); }
+    });
+  }
+
+  function flip() {
+    if (st.busy) return;
+    st.flipped = !st.flipped;
+    const fc = $('#fc', el);
+    fc.classList.toggle('flipped', st.flipped);
+    $('.fc-front', fc).setAttribute('aria-hidden', st.flipped);
+    $('.fc-back', fc).setAttribute('aria-hidden', !st.flipped);
+  }
+
+  function swipe(fc) {
+    let x0 = null, y0 = 0, dx = 0, dy = 0, id = null;
+    const paint = () => {
+      fc.style.transform = `translateX(${dx}px) rotate(${dx / 18}deg)`;
+      $('.fc-stamp.yes', fc).style.opacity = Math.min(1, Math.max(0, -dx / 90));
+      $('.fc-stamp.no', fc).style.opacity = Math.min(1, Math.max(0, dx / 90));
+    };
+    fc.addEventListener('pointerdown', e => {
+      if (st.busy || e.button > 0 || e.target.closest('a, audio')) return;
+      x0 = e.clientX; y0 = e.clientY; dx = dy = 0; id = e.pointerId;
+      fc.classList.add('dragging');
+    });
+    fc.addEventListener('pointermove', e => {
+      if (x0 === null || e.pointerId !== id) return;
+      dx = e.clientX - x0; dy = e.clientY - y0;
+      if (Math.abs(dx) > 8 && !fc.hasPointerCapture(id)) fc.setPointerCapture(id);
+      if (Math.abs(dx) > 8) paint();
+    });
+    const end = e => {
+      if (x0 === null || e.pointerId !== id) return;
+      x0 = null;
+      fc.classList.remove('dragging');
+      if (e.type === 'pointerup' && Math.abs(dx) > 90) return decide(dx < 0);
+      if (e.type === 'pointerup' && Math.abs(dx) < 8 && Math.abs(dy) < 8) flip();
+      dx = 0; paint();
+    };
+    fc.addEventListener('dragstart', e => e.preventDefault());
+    fc.addEventListener('pointerup', end);
+    fc.addEventListener('pointercancel', end);
+  }
+
+  function decide(ok) {
+    if (st.busy) return;
+    st.busy = true;
+    const row = st.queue.shift();
+    if (ok) st.mastered++;
+    else {
+      st.again.push(row);
+      st.misses.set(row._id, (st.misses.get(row._id) || 0) + 1);
+    }
+    const fc = $('#fc', el);
+    fc.classList.remove('dragging');
+    $(`.fc-stamp.${ok ? 'yes' : 'no'}`, fc).style.opacity = 1;
+    fc.classList.add(ok ? 'out-left' : 'out-right');
+    setTimeout(next, 260);
+  }
+
+  function next() {
+    if (!st.queue.length) {
+      if (!st.again.length) return finish(false);
+      st.round++;
+      st.queue = shuffle(st.again);
+      st.again = [];
+      toast(`Tour ${st.round} : ${st.queue.length} carte${st.queue.length > 1 ? 's' : ''} à revoir`);
+    }
+    render();
+  }
+
+  function finish(stopped) {
+    clearKeys();
+    const lbl = k => col(k)?.label || k;
+    const firstTry = st.total - st.misses.size;
+    const complete = st.mastered === st.total;
+    if (complete) {
+      history.add({
+        listId: list.id, listTitle: list.title, mode: 'cartes', review: false,
+        show: cfg.show.map(lbl), find: cfg.find.map(lbl),
+        score: firstTry, total: st.total, seconds: Math.round((Date.now() - st.start) / 1000),
+      });
+    }
+    const missedRows = rows.filter(r => st.misses.has(r._id))
+      .sort((a, b) => st.misses.get(b._id) - st.misses.get(a._id));
+    const pct = Math.round(firstTry / st.total * 100);
+    el.innerHTML = `<section class="result">
+      <h1>${complete ? 'Tout est maîtrisé 🎉' : `${st.mastered} / ${st.total} maîtrisées`}</h1>
+      ${complete ? `<div class="ring" style="--p:${pct}"><span>${pct} %</span></div>
+        <p>${firstTry} / ${st.total} du premier coup · ${st.round} tour${st.round > 1 ? 's' : ''}</p>` : ''}
+      <p class="muted">${esc(list.title)} · cartes mémoire</p>
+      <div class="actions center">
+        <button class="btn primary" id="again">Recommencer</button>
+        ${missedRows.length ? `<button class="btn" id="retry">Revoir les ${missedRows.length} difficile${missedRows.length > 1 ? 's' : ''}</button>` : ''}
+        <a class="btn ghost" href="#/liste/${encodeURIComponent(list.id)}">Changer les réglages</a>
+      </div>
+      ${missedRows.length ? `<h2>Les plus difficiles</h2>
+        <div class="cards">${missedRows.map(r => cardHTML(list, r, cfg.find)).join('')}</div>` : ''}
+    </section>`;
+    $('#again', el).onclick = () => startFlashcards(el, list, cfg, rows);
+    const retry = $('#retry', el);
+    if (retry) retry.onclick = () => startFlashcards(el, list, cfg, missedRows);
+    window.scrollTo({ top: 0 });
+  }
+
+  render();
+  window.scrollTo({ top: 0 });
+}
+
 // ======================= Révision espacée =======================
 
 export async function renderReview(el, onlyList = null) {
@@ -587,7 +776,7 @@ export async function renderReview(el, onlyList = null) {
 
 // ======================= Défis =======================
 
-const MODES = { qcm: 'Choix multiple', libre: 'Saisie libre', chrono: 'Ordre' };
+const MODES = { qcm: 'Choix multiple', libre: 'Saisie libre', chrono: 'Ordre', cartes: 'Cartes mémoire' };
 
 export function exerciseLabel(list, cfg) {
   const lbl = k => list.columns.find(c => c.key === k)?.label || k;
