@@ -1,7 +1,7 @@
 // Préparation d'un entraînement, déroulé des questions, révision.
 import { $, $$, esc, shuffle, sample, matchText, parseNumber, parseUserDate, parseDate, toast } from './util.js';
 import { loadList, loadIndex, display, sortKey, mediaInfo, mediaHTML, cardHTML, isEmpty, textOf,
-  filterColumns, allTags, applyFilters } from './data.js';
+  filterColumns, allTags, applyFilters, rowLinks, linksHTML, listHref, listTitle } from './data.js';
 import { progress, history, favorites, lastConfig } from './store.js';
 import { cloudEnabled, currentUser, submitScore, createChallenge } from './cloud.js';
 
@@ -18,6 +18,29 @@ function onKeys(fn) {
 
 const isMedia = c => c.type === 'image' || c.type === 'audio';
 const orderable = c => c.type === 'date' || c.type === 'number';
+// Les colonnes « Lien vers une liste » ne servent pas de question.
+const quizzable = c => c.type !== 'list';
+
+// Nom court d'une fiche (première colonne texte).
+function rowName(list, row) {
+  const t = list.columns.find(c => c.type === 'text' && !isEmpty(row[c.key]));
+  return t ? display(t, row[t.key]) : '';
+}
+
+// « Pour aller plus loin » : listes reliées aux fiches données.
+function deeperHTML(list, rows, title = 'Pour aller plus loin') {
+  const seen = new Set();
+  const items = [];
+  for (const r of rows) {
+    for (const l of rowLinks(list, r)) {
+      if (seen.has(l.id)) continue;
+      seen.add(l.id);
+      const name = rowName(list, r);
+      items.push(`<a class="sublist" href="${esc(listHref(l.id, list.id))}">${name ? `<span class="muted">${esc(name)} ·</span> ` : ''}📚 ${esc(l.title)} →</a>`);
+    }
+  }
+  return items.length ? `<div class="panel deeper"><h2>${esc(title)}</h2><div class="sublists">${items.join('')}</div></div>` : '';
+}
 
 function defaultConfig(list) {
   const img = list.columns.find(c => c.type === 'image');
@@ -29,13 +52,15 @@ function defaultConfig(list) {
 
 // ======================= Écran de préparation =======================
 
-export async function renderSetup(el, listId, preset = null) {
+export async function renderSetup(el, listId, preset = null, from = null) {
   const list = await loadList(listId);
+  const qcols = list.columns.filter(quizzable);
+  const parentTitle = from && from !== listId ? listTitle(from) : null;
   const cfg = structuredClone(preset || lastConfig.get(listId) || defaultConfig(list));
   cfg.filters ||= { tags: [], values: {} };
   cfg.filters.values ||= {};
   cfg.filters.tags ||= [];
-  const known = new Set(list.columns.map(c => c.key));
+  const known = new Set(qcols.map(c => c.key));
   cfg.show = cfg.show.filter(k => known.has(k));
   cfg.find = cfg.find.filter(k => known.has(k));
 
@@ -47,11 +72,13 @@ export async function renderSetup(el, listId, preset = null) {
   el.innerHTML = `
     <section class="setup">
       <div class="page-head">
-        <a href="#/" class="back">← Listes</a>
+        ${parentTitle ? `<a href="${esc(listHref(from))}" class="back">← ${esc(parentTitle)}</a>` : '<a href="#/" class="back">← Listes</a>'}
         <h1>${esc(list.title)}</h1>
         ${list.description ? `<p class="muted">${esc(list.description)}</p>` : ''}
         <p class="muted small">${list.rows.length} fiches${list.source ? ` · ${esc(list.source)}` : ''}</p>
       </div>
+
+      ${deeperHTML(list, list.rows, 'Listes reliées aux fiches')}
 
       <div class="panel">
         <h2>Mode</h2>
@@ -68,7 +95,7 @@ export async function renderSetup(el, listId, preset = null) {
         <h2>Colonnes</h2>
         <p class="hint" id="cols-hint"></p>
         <div class="cols" id="cols">
-          ${list.columns.map(c => `
+          ${qcols.map(c => `
             <div class="col-row" data-key="${esc(c.key)}">
               <span class="col-name">${esc(c.label)} <span class="type">${esc(c.type)}</span></span>
               <div class="seg small">
@@ -532,6 +559,7 @@ export function startSession(el, list, cfg, { questions = null, review = false, 
       ${currentUser() && !review && done === qs.length ? `<div class="actions center"><button class="btn" id="dare">⚔️ Défier mes potes avec ces questions</button></div>` : ''}`}
       ${missed.length && !missed[0].chrono ? `<h2>À revoir</h2><p class="hint">Elles reviendront aussi dans « Révision » selon un calendrier espacé.</p>
         <div class="cards">${missed.map(r => cardHTML(list, r.row, r.find)).join('')}</div>` : ''}
+      ${deeperHTML(list, [...missed, ...state.results.filter(r => r.ok)].flatMap(r => r.rows || [r.row]))}
     </section>`;
     const dare = $('#dare', el);
     if (dare) dare.onclick = async () => {
@@ -598,7 +626,7 @@ function startFlashcards(el, list, cfg, givenRows = null) {
         <div class="fc" id="fc" tabindex="0" role="button" aria-label="Retourner la carte">
           <div class="fc-inner">
             <div class="fc-face fc-front"><span class="fc-side">Recto</span>${face(row, cfg.show)}</div>
-            <div class="fc-face fc-back" aria-hidden="true"><span class="fc-side">Verso</span>${face(row, cfg.find)}</div>
+            <div class="fc-face fc-back" aria-hidden="true"><span class="fc-side">Verso</span>${face(row, cfg.find)}${linksHTML(list, row) ? `<div class="sublists">${linksHTML(list, row)}</div>` : ''}</div>
           </div>
           <div class="fc-stamp yes">✓ Maîtrisée</div>
           <div class="fc-stamp no">✗ Pas encore</div>
@@ -720,6 +748,7 @@ function startFlashcards(el, list, cfg, givenRows = null) {
       </div>
       ${missedRows.length ? `<h2>Les plus difficiles</h2>
         <div class="cards">${missedRows.map(r => cardHTML(list, r, cfg.find)).join('')}</div>` : ''}
+      ${deeperHTML(list, [...missedRows, ...rows])}
     </section>`;
     $('#again', el).onclick = () => startFlashcards(el, list, cfg, rows);
     const retry = $('#retry', el);

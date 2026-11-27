@@ -390,3 +390,16 @@ table.users tr.me td { background: var(--hl); }
   .fc-actions #flip { grid-column: 1 / -1; order: 3; }
   .fc-actions .btn { white-space: nowrap; }
 }
+
+/* Liens d'une fiche vers d'autres listes */
+.sublists { display: flex; flex-wrap: wrap; gap: .4rem; }
+.sublist {
+  display: inline-flex; align-items: center; gap: .3rem; font-size: .9rem; font-weight: 600; text-decoration: none;
+  padding: .3rem .75rem; border-radius: 99px; border: 1px solid var(--accent); color: var(--accent); background: var(--surface);
+}
+.sublist:hover { background: var(--accent); color: var(--accent-ink); }
+.sublist:hover .muted { color: inherit; }
+.sublist .muted { font-weight: 500; }
+.card .sublists { margin-top: .2rem; }
+.fc-face .sublists { justify-content: center; margin-top: .6rem; }
+.result .deeper { text-align: left; margin-top: 1.5rem; }
