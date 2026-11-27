@@ -46,6 +46,12 @@ jobs:
           mkdir -p _site
           cp -r index.html css js lists _site/
           touch _site/.nojekyll
+          # Numéro de version dans les adresses des fichiers : le navigateur charge
+          # forcément la nouvelle version après chaque publication (pas de vieux cache).
+          V=${GITHUB_SHA::8}
+          sed -i -E "s#(from '\./[A-Za-z0-9_-]+\.js)'#\1?v=$V'#g" _site/js/*.js
+          sed -i -E "s#(src=\"js/app\.js)\"#\1?v=$V\"#; s#(href=\"css/style\.css)\"#\1?v=$V\"#" _site/index.html
+          grep -q "app.js?v=$V" _site/index.html
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
