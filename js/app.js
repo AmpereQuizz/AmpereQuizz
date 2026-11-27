@@ -14,7 +14,7 @@ const app = $('#app');
 const routes = [
   [/^#?\/?$/, el => renderHome(el)],
   [/^#\/c\/([\w-]+)$/, (el, id) => renderHome(el, id)],
-  [/^#\/liste\/(.+)$/, (el, id) => renderSetup(el, decodeURIComponent(id))],
+  [/^#\/liste\/([^?]+)(?:\?de=(.+))?$/, (el, id, from) => renderSetup(el, decodeURIComponent(id), null, from ? decodeURIComponent(from) : null)],
   [/^#\/favori\/(.+)$/, renderFavorite],
   [/^#\/revision(?:\/(.+))?$/, (el, id) => renderReview(el, id ? decodeURIComponent(id) : null)],
   [/^#\/historique$/, renderHistory],

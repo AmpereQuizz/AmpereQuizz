@@ -9,7 +9,44 @@ export const TYPES = {
   date: 'Date',
   image: 'Image',
   audio: 'Son',
+  list: 'Lien vers une liste',
 };
+
+// Titres de toutes les listes connues (remplis par loadIndex), pour afficher les liens entre listes.
+const titles = new Map();
+let titlesReady = null;
+
+export async function ensureTitles() {
+  if (!titles.size) { titlesReady ||= loadIndex().catch(() => {}); await titlesReady; }
+}
+
+// Identifiants des listes reliées dans une cellule « Lien vers une liste » (texte ou tableau).
+export function linkIds(v) {
+  return (Array.isArray(v) ? v : [v]).map(x => typeof x === 'object' && x ? x.list : x)
+    .filter(x => typeof x === 'string' && x.trim()).map(x => x.trim());
+}
+
+// Liens d'une fiche vers d'autres listes, limités aux listes qui existent (ou qu'on peut ouvrir).
+export function rowLinks(list, row) {
+  const out = [];
+  for (const c of list.columns) {
+    if (c.type !== 'list') continue;
+    for (const id of linkIds(row[c.key])) {
+      if (id === list.id || !titles.has(id)) continue;
+      if (!out.some(l => l.id === id)) out.push({ id, title: titles.get(id), label: c.label });
+    }
+  }
+  return out;
+}
+
+export const listHref = (id, from) => `#/liste/${encodeURIComponent(id)}${from ? '?de=' + encodeURIComponent(from) : ''}`;
+
+export function linksHTML(list, row) {
+  return rowLinks(list, row).map(l =>
+    `<a class="sublist" href="${esc(listHref(l.id, list.id))}" title="${esc(l.label)}">📚 ${esc(l.title)} →</a>`).join('');
+}
+
+export const listTitle = id => titles.get(id);
 
 let indexCache = null;
 const listCache = new Map();
@@ -80,10 +117,14 @@ export async function loadIndex() {
       }));
     } catch (e) { console.warn('Listes perso indisponibles', e); }
   }
-  return [...indexCache, ...mine, ...local];
+  const out = [...indexCache, ...mine, ...local];
+  titles.clear();
+  for (const l of out) titles.set(l.id, l.title);
+  return out;
 }
 
 export async function loadList(id) {
+  await ensureTitles();
   if (id.startsWith('brouillon:')) {
     const d = drafts.get(id.slice(10));
     if (!d) throw new Error('Brouillon introuvable');
@@ -146,7 +187,8 @@ export function display(col, v) {
     case 'number': return formatNumber(typeof v === 'number' ? v : Number(v)) + (col.unit ? ' ' + col.unit : '');
     case 'date': return formatDate(v);
     case 'image':
-    case 'audio': return '';
+    case 'audio':
+    case 'list': return '';
     default: return String(textOf(v));
   }
 }
@@ -184,7 +226,7 @@ export function mediaHTML(list, col, v, cls = '') {
 export function cardHTML(list, row, highlight = []) {
   const items = list.columns.map(col => {
     const v = row[col.key];
-    if (isEmpty(v)) return '';
+    if (isEmpty(v) || col.type === 'list') return '';
     const hl = highlight.includes(col.key) ? ' hl' : '';
     if (col.type === 'image' || col.type === 'audio') {
       return `<div class="card-field media-field${hl}"><span class="lbl">${esc(col.label)}</span>${mediaHTML(list, col, v)}</div>`;
@@ -193,7 +235,8 @@ export function cardHTML(list, row, highlight = []) {
     return `<div class="card-field${hl}"><span class="lbl">${esc(col.label)}</span><span class="val">${esc(display(col, v))}</span>${alt}</div>`;
   }).join('');
   const tags = row.tags?.length ? `<div class="tags">${row.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : '';
-  return `<div class="card">${items}${tags}</div>`;
+  const links = linksHTML(list, row);
+  return `<div class="card">${items}${tags}${links ? `<div class="sublists">${links}</div>` : ''}</div>`;
 }
 
 // Colonnes texte pouvant servir de filtre (peu de valeurs distinctes, répétées).

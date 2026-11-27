@@ -1,6 +1,6 @@
 // Éditeur de listes : brouillons locaux, export (.zip / .json), publication GitHub.
 import { $, $$, esc, slugify, toast } from './util.js';
-import { loadIndex, TYPES, textOf, mediaInfo, isEmpty, publicData, invalidateLists } from './data.js';
+import { loadIndex, TYPES, textOf, mediaInfo, isEmpty, publicData, invalidateLists, linkIds } from './data.js';
 import { drafts } from './store.js';
 import { connection, connect, disconnect, commitFiles, readFile, guessRepo } from './github.js';
 import { cloudEnabled, currentUser, saveMyList, getMyList, deleteMyList, savePublicList, hidePublicList } from './cloud.js';
@@ -151,9 +151,12 @@ export async function renderConnectLink(el, repo, token) {
 
 // ======================= Édition d'un brouillon =======================
 
-export function renderEditor(el, draftId) {
+export async function renderEditor(el, draftId) {
   const d = drafts.get(draftId);
   if (!d) { location.hash = '#/editeur'; return; }
+  // Listes qu'on peut relier à une fiche (colonnes « Lien vers une liste »).
+  let linkable = [];
+  try { linkable = (await loadIndex()).filter(l => !l.draft); } catch (e) { console.warn(e); }
   d.columns ||= [];
   d.rows ||= [];
   let saveTimer = null;
@@ -200,7 +203,7 @@ export function renderEditor(el, draftId) {
 
       <div class="panel">
         <h2>Fiches <span class="muted small">(${d.rows.length})</span></h2>
-        <p class="hint">Plusieurs réponses acceptées : séparez-les par « | » (ex. « Rouge-gorge | Rougegorge »). Dates : 1515 ou 1515-09-13. Images : fichier, adresse web, ou <code>wikipedia:Titre de l’article</code> (la photo et son crédit sont récupérés à la publication).</p>
+        <p class="hint">Plusieurs réponses acceptées : séparez-les par « | » (ex. « Rouge-gorge | Rougegorge »). Dates : 1515 ou 1515-09-13. Images : fichier, adresse web, ou <code>wikipedia:Titre de l’article</code> (la photo et son crédit sont récupérés à la publication).${d.columns.some(c => c.type === 'list') ? ' Lien vers une liste : choisissez la liste qui s’ouvre quand on clique sur la fiche (une liste privée ne s’ouvre que pour vous).' : ''}</p>
         <div class="table-wrap"><table class="ed-rows">
           <thead><tr><th>#</th>${d.columns.map(c => `<th>${esc(c.label)}</th>`).join('')}<th>Étiquettes</th><th></th></tr></thead>
           <tbody>${d.rows.map((r, i) => rowHTML(r, i)).join('')}</tbody>
@@ -232,6 +235,18 @@ export function renderEditor(el, draftId) {
   }
 
   function cellHTML(c, v) {
+    if (c.type === 'list') {
+      const cur = linkIds(v)[0] || '';
+      const own = l => l.id === d.id || (d._cloudId && l.id === 'perso:' + d._cloudId);
+      const site = linkable.filter(l => !l.mine && !own(l)), mine = linkable.filter(l => l.mine && !own(l));
+      const opt = l => `<option value="${esc(l.id)}" ${l.id === cur ? 'selected' : ''}>${esc(l.title)}</option>`;
+      const unknown = cur && !linkable.some(l => l.id === cur);
+      return `<select data-link aria-label="${esc(c.label)}"><option value="">—</option>
+        ${unknown ? `<option value="${esc(cur)}" selected>${esc(cur)} (introuvable)</option>` : ''}
+        ${site.length ? `<optgroup label="Listes du site">${site.map(opt).join('')}</optgroup>` : ''}
+        ${mine.length ? `<optgroup label="Mes listes (privées)">${mine.map(opt).join('')}</optgroup>` : ''}
+      </select>`;
+    }
     if (c.type === 'image' || c.type === 'audio') {
       const m = mediaInfo({ _base: 'lists/' }, v);
       const shown = !v ? '' : typeof v === 'string' ? (v.startsWith('data:') ? '(fichier importé)' : v)
@@ -330,6 +345,11 @@ export function renderEditor(el, draftId) {
       const v = parseCell(c, i.value);
       if (v === undefined) delete r[c.key]; else r[c.key] = v;
       save();
+    });
+    $$('[data-link]', el).forEach(i => i.onchange = () => {
+      const r = rowOf(i), c = colOf(i);
+      if (i.value) r[c.key] = i.value; else delete r[c.key];
+      save(true);
     });
     $$('[data-tags]', el).forEach(i => i.oninput = () => {
       const r = rowOf(i);

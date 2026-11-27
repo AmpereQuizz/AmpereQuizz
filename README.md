@@ -51,7 +51,7 @@ L'index `lists/index.json` est généré automatiquement au déploiement (ne pas
 |---|---|
 | `key` | Nom technique, unique, sans espace. Ne pas le changer une fois la liste utilisée. |
 | `label` | Nom affiché. |
-| `type` | `text`, `number`, `date`, `image` ou `audio`. |
+| `type` | `text`, `number`, `date`, `image`, `audio` ou `list` (lien vers une autre liste, voir plus bas). |
 | `unit` | (nombre) unité affichée, ex. `"cm"`. |
 | `tolerance` | (nombre) écart accepté en saisie libre : absolu (`2`) ou relatif (`"10%"`). (date) écart en années. |
 | `filter` | `false` pour ne jamais proposer la colonne comme filtre, `true` pour la forcer. Par défaut, les colonnes texte avec peu de valeurs différentes deviennent des filtres. |
@@ -66,8 +66,25 @@ L'index `lists/index.json` est généré automatiquement au déploiement (ne pas
   - une adresse web complète ;
   - un objet avec crédit : `{ "src": "img/…", "credit": "Auteur", "license": "CC BY-SA 4.0", "source": "https://…" }` ;
   - **récupération automatique** : `{ "wikipedia": "Merle noir" }` (article français ; `"en:…"` pour une autre langue ; un tableau pour essayer plusieurs titres) ou `{ "commons": "Nom du fichier.jpg" }`. Au déploiement, l'image libre de l'article est téléchargée dans `lists/img/<liste>/`, puis le JSON est complété avec `src`, l'auteur, la licence et la source, et enregistré dans le dépôt.
+- **Lien vers une liste** (`list`) : l'identifiant de la liste à ouvrir depuis cette fiche, ex. `"sujet-da-vinci"` (fichier du dépôt ou liste publique en ligne) ou `"perso:<id>"` (liste perso, visible seulement par son auteur). Un tableau relie plusieurs listes.
 - `id` (facultatif mais conseillé) : identifiant stable de la fiche, utilisé pour la révision.
 - `tags` (facultatif) : étiquettes servant de filtres.
+
+### Relier des listes entre elles
+
+Une colonne de type « Lien vers une liste » relie une fiche à une autre liste : dans « Grands peintres italiens », la fiche Léonard de Vinci peut ouvrir la liste « Sujet Da Vinci ».
+
+```json
+"columns": [
+  { "key": "nom", "label": "Nom", "type": "text" },
+  { "key": "approfondir", "label": "Approfondir", "type": "list" }
+],
+"rows": [
+  { "id": "leonard", "nom": "Léonard de Vinci", "approfondir": "sujet-da-vinci" }
+]
+```
+
+Dans l'éditeur, la cellule propose la liste des listes existantes. Sur le site, le lien apparaît sur la fiche (parcourir les fiches, correction après chaque question, verso des cartes mémoire), dans « Listes reliées aux fiches » sur la page de la liste, et dans « Pour aller plus loin » à la fin d'un entraînement. La liste ouverte garde un lien « ← » vers la liste d'origine. Ces colonnes ne servent jamais de question. Un lien vers une liste qui n'existe pas (ou privée d'un autre compte) est simplement masqué.
 
 ## Développement local
 
